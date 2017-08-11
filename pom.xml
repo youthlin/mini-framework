@@ -7,7 +7,7 @@
     <groupId>com.youthlin</groupId>
     <artifactId>mini-framework</artifactId>
     <packaging>pom</packaging>
-    <version>1.0-SNAPSHOT</version>
+    <version>1.0.0</version>
     <modules>
         <module>mini-ioc</module>
     </modules>
@@ -38,6 +38,9 @@
         </dependencies>
     </dependencyManagement>
 
+    <name>mini-framework</name>
+    <description>a mini java framework</description>
+    <url>http://github.com/YouthLin/mini-framework</url>
     <build>
         <plugins>
             <plugin>
