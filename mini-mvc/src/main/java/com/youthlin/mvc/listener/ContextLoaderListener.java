@@ -27,8 +27,8 @@ import java.util.concurrent.ConcurrentHashMap;
 @SuppressWarnings("WeakerAccess")
 public class ContextLoaderListener implements ServletContextListener {
     private static final Logger LOGGER = LoggerFactory.getLogger(ContextLoaderListener.class);
-    private static final String FORWORD = "/";
-    public static final String CONTAINER = "container";
+    private static final String FORWARD = "/";
+    public static final String CONTAINER = "mini-ioc-container";
     public static final String URL_MAPPING_MAP = "URL_MAPPING_MAP";
     private Context container;
     private Map<URLAndMethods, ControllerAndMethod> urlMapping = new ConcurrentHashMap<>();
@@ -85,20 +85,20 @@ public class ContextLoaderListener implements ServletContextListener {
                             com.youthlin.mvc.annotation.Method[] urlMethod = (com.youthlin.mvc.annotation.Method[])
                                     AnnotationUtil.getValue(method, urlAnnotation, "method");
                             urlPrefix = urlPrefix == null ? "" : urlPrefix;
-                            if (!urlPrefix.startsWith(FORWORD)) {
-                                urlPrefix = FORWORD + urlPrefix;
+                            if (!urlPrefix.startsWith(FORWARD)) {
+                                urlPrefix = FORWARD + urlPrefix;
                             }
-                            if (urlPrefix.endsWith(FORWORD)) {
-                                urlPrefix = urlPrefix.substring(0, urlPrefix.length() - FORWORD.length());
+                            if (urlPrefix.endsWith(FORWARD)) {
+                                urlPrefix = urlPrefix.substring(0, urlPrefix.length() - FORWARD.length());
                             }
-                            if (!url.startsWith(FORWORD)) {
-                                url = FORWORD + url;
+                            if (!url.startsWith(FORWARD)) {
+                                url = FORWARD + url;
                             }
                             url = urlPrefix + url;
                             URLAndMethods urlAndMethods = new URLAndMethods(url, urlMethod);
                             ControllerAndMethod controllerAndMethod = new ControllerAndMethod(bean, method);
                             urlMapping.put(urlAndMethods, controllerAndMethod);
-                            LOGGER.info("mapping url {}|{} to method {}", url, Arrays.toString(urlMethod), method);
+                            LOGGER.info("mapping url {} {} to method {}", url, Arrays.toString(urlMethod), method);
                         }
                     }
                 }

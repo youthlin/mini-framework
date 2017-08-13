@@ -115,6 +115,9 @@ public class SimpleAnnotationProcessor implements IAnnotationProcessor {
                 LOGGER.info("find bean: {}, name: {}, annotations: {}",
                         o.getClass(), name, Arrays.toString(aClass.getAnnotations()));
             }
+        } catch (ClassNotFoundException | NoClassDefFoundError e) {
+            unloadedClassName.add(className);
+            LOGGER.trace("can not load class: {}", className, e);//很常见的 第三方依赖的类可能不在 classpath 中
         } catch (Throwable e) {
             unloadedClassName.add(className);
             LOGGER.warn("can not load class: {}", className, e);
@@ -146,7 +149,6 @@ public class SimpleAnnotationProcessor implements IAnnotationProcessor {
                 Bean beanAnnotation = field.getAnnotation(Bean.class);
                 Resource resourceAnnotation = field.getAnnotation(Resource.class);
                 if (beanAnnotation != null || resourceAnnotation != null) {
-                    //该字段需要注入
                     Object filedValue;
                     String name = AnnotationUtil.getAnnotationName(field);
                     if (!name.isEmpty()) {//如果有名称，使用名称查找 Bean

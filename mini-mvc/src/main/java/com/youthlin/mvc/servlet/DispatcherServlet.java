@@ -46,7 +46,7 @@ public class DispatcherServlet extends HttpServlet {
             controllerAndMethod = urlMappingMap.get(urlAndMethods);
         }
         int lastIndexOfDot = uri.lastIndexOf(".");
-        if (lastIndexOfDot > 0) {
+        if (lastIndexOfDot > 0) {// url:/get/some.html -> /get/some
             urlAndMethods = new URLAndMethods(uri.substring(0, lastIndexOfDot), URLAndMethods.method(reqMethod));
             controllerAndMethod = urlMappingMap.get(urlAndMethods);
             if (controllerAndMethod == null) {
@@ -188,7 +188,7 @@ public class DispatcherServlet extends HttpServlet {
 
     protected void processNoMatch(HttpServletRequest req, HttpServletResponse resp)
             throws ServletException, IOException {
-        resp.setContentType("text/plain");
+        resp.setContentType("text/plain;charset=UTF-8");
         PrintWriter out = resp.getWriter();
         out.println(req.getMethod() + " " + req.getRequestURI());
         out.println("No matched Controller.");
@@ -196,6 +196,7 @@ public class DispatcherServlet extends HttpServlet {
 
     protected void peocessInvokeResult(Object result, HttpServletRequest req, HttpServletResponse resp,
             ControllerAndMethod controllerAndMethod) {
-
+        //返回字符串：页面
+        //返回对象：json
     }
 }
