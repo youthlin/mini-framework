@@ -28,8 +28,12 @@ import java.util.concurrent.ConcurrentHashMap;
 public class ContextLoaderListener implements ServletContextListener {
     private static final Logger LOGGER = LoggerFactory.getLogger(ContextLoaderListener.class);
     private static final String FORWARD = "/";
-    public static final String CONTAINER = "mini-ioc-container";
-    public static final String URL_MAPPING_MAP = "URL_MAPPING_MAP";
+    public static final String CONTAINER = "_MINI_IOC_CONTAINER";
+    public static final String URL_MAPPING_MAP = "_URL_MAPPING_MAP";
+    public static final String VIEW_PREFIX = "_VIEW_PREFIX";
+    public static final String VIEW_PREFIX_PARAM_NAME = "view-prefix";
+    public static final String VIEW_SUFFIX = "_VIEW_SUFFIX";
+    public static final String VIEW_SUFFIX_PARAM_NAME = "view-suffix";
     private Context container;
     private Map<URLAndMethods, ControllerAndMethod> urlMapping = new ConcurrentHashMap<>();
 
@@ -37,7 +41,8 @@ public class ContextLoaderListener implements ServletContextListener {
         LOGGER.debug("构造 ContextLoaderListener");
     }
 
-    @Override public void contextInitialized(ServletContextEvent sce) {
+    @Override
+    public void contextInitialized(ServletContextEvent sce) {
         LOGGER.debug("contextInitialized sce = {}", sce);
         init(sce);
         mapping(sce);
@@ -47,13 +52,21 @@ public class ContextLoaderListener implements ServletContextListener {
     private void init(ServletContextEvent sce) {
         ServletContext servletContext = sce.getServletContext();
         LOGGER.debug("servlet context = {}, source = {}", servletContext, sce.getSource());
+        servletContext.setAttribute(VIEW_PREFIX,"");
+        servletContext.setAttribute(VIEW_SUFFIX,"");
         Enumeration<String> initParameterNames = servletContext.getInitParameterNames();
         while (initParameterNames.hasMoreElements()) {
             String parameterName = initParameterNames.nextElement();
-            LOGGER.debug("name = {}, value = {}", parameterName, servletContext.getInitParameter(parameterName));
+            String initParameterValue = servletContext.getInitParameter(parameterName);
+            if (parameterName.equals(VIEW_PREFIX_PARAM_NAME)) {
+                servletContext.setAttribute(VIEW_PREFIX,initParameterValue);
+            } else if (parameterName.equals(VIEW_SUFFIX_PARAM_NAME)) {
+                servletContext.setAttribute(VIEW_SUFFIX, initParameterValue);
+            }
+            LOGGER.debug("name = {}, value = {}", parameterName, initParameterValue);
         }
         String scan = servletContext.getInitParameter("scan");
-        String[] scanPackages = { "" };
+        String[] scanPackages = {""};
         if (scan != null) {
             scanPackages = scan.split("\\s|,|;");
         }
@@ -107,7 +120,8 @@ public class ContextLoaderListener implements ServletContextListener {
         sce.getServletContext().setAttribute(URL_MAPPING_MAP, urlMapping);
     }
 
-    @Override public void contextDestroyed(ServletContextEvent sce) {
+    @Override
+    public void contextDestroyed(ServletContextEvent sce) {
         LOGGER.debug("contextDestroyed, sce = {}", sce);
     }
 

@@ -1,6 +1,8 @@
 package com.youthlin.mvc.servlet;
 
+import com.youthlin.ioc.annotaion.AnnotationUtil;
 import com.youthlin.mvc.annotation.Param;
+import com.youthlin.mvc.annotation.ResponseBody;
 import com.youthlin.mvc.listener.ContextLoaderListener;
 import com.youthlin.mvc.mapping.ControllerAndMethod;
 import com.youthlin.mvc.mapping.URLAndMethods;
@@ -8,6 +10,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.servlet.ServletException;
+import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -27,6 +30,8 @@ import java.util.Map;
 @SuppressWarnings("WeakerAccess")
 public class DispatcherServlet extends HttpServlet {
     private static final Logger LOGGER = LoggerFactory.getLogger(DispatcherServlet.class);
+    public static final String REDIRECT = "redirect:";
+    public static final String FORWARD = "forward:";
 
     /**
      * 重写 service 方法.  当请求路径有映射的 Controller 时 将请求分发到 Controller 上
@@ -72,7 +77,9 @@ public class DispatcherServlet extends HttpServlet {
             }
             Object ret = method.invoke(controller, parameter);
             LOGGER.debug("invoke ret: {}", ret);
-            peocessInvokeResult(ret, req, resp, controllerAndMethod);
+            processInvokeResult(ret, req, resp, controllerAndMethod);
+        } catch (ServletException | IOException e) {
+            throw e;
         } catch (Throwable e) {
             LOGGER.error("{}", controllerAndMethod, e);
             throw new RuntimeException(e);
@@ -173,7 +180,7 @@ public class DispatcherServlet extends HttpServlet {
         }
         String value = request.getParameter(name);
         if (param.required() && value == null) {
-            throw new IllegalArgumentException("parameter " + name + " is required.");
+            throw new IllegalArgumentException("parameter \"" + name + "\" is required.");
         }
         String defaultValue = param.defaultValue();
         if (value == null) {
@@ -189,14 +196,39 @@ public class DispatcherServlet extends HttpServlet {
     protected void processNoMatch(HttpServletRequest req, HttpServletResponse resp)
             throws ServletException, IOException {
         resp.setContentType("text/plain;charset=UTF-8");
+        resp.setStatus(HttpServletResponse.SC_NOT_FOUND);
         PrintWriter out = resp.getWriter();
         out.println(req.getMethod() + " " + req.getRequestURI());
         out.println("No matched Controller.");
     }
 
-    protected void peocessInvokeResult(Object result, HttpServletRequest req, HttpServletResponse resp,
-            ControllerAndMethod controllerAndMethod) {
-        //返回字符串：页面
-        //返回对象：json
+    protected void processInvokeResult(Object result, HttpServletRequest req, HttpServletResponse resp,
+                                       ControllerAndMethod controllerAndMethod) throws IOException, ServletException {
+        Method method = controllerAndMethod.getMethod();
+        ResponseBody responseBody = AnnotationUtil.getAnnotation(method, ResponseBody.class);
+        if (responseBody != null) {
+            //返回对象：json
+//            resp.setContentType("application/json;charset=UTF-8");
+//            PrintWriter out = resp.getWriter();
+//            ServletOutputStream stream = resp.getOutputStream();
+
+        } else {
+            //返回字符串：页面
+            if (result instanceof String) {
+                if (((String) result).startsWith(REDIRECT)) {
+                    resp.sendRedirect(((String) result).substring(REDIRECT.length()));
+                    return;
+                } else if (((String) result).startsWith(FORWARD)) {
+                    req.getRequestDispatcher(((String) result).substring(FORWARD.length())).forward(req, resp);
+                    return;
+                }
+                String prefix = (String) super.getServletContext().getAttribute(ContextLoaderListener.VIEW_PREFIX);
+                String suffix = (String) super.getServletContext().getAttribute(ContextLoaderListener.VIEW_SUFFIX);
+                req.getRequestDispatcher(prefix + result + suffix).forward(req, resp);
+            } else {
+                throw new RuntimeException("You can only return String value when there is no @ResponseBody on method.");
+            }
+        }
     }
+
 }
