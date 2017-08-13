@@ -8,7 +8,10 @@ import javax.annotation.Resource;
 import java.io.File;
 import java.io.FileFilter;
 import java.io.IOException;
+import java.lang.annotation.Annotation;
+import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.net.URL;
@@ -34,6 +37,7 @@ public class AnnotationUtil {
     private static final String DOT_CLASS = ".class";
     private static final String DOLLAR = "$";
     private static final String DOT = ".";
+    private static final String VALUE = "value";
     private static final FileFilter FILE_FILTER = new FileFilter() {
         @Override public boolean accept(File pathname) {
             if (pathname.isDirectory()) {
@@ -60,7 +64,8 @@ public class AnnotationUtil {
     private static List<String> getClassNames(String basePackage) {
         List<String> classNames = new ArrayList<>();
         try {
-            Enumeration<URL> systemResources = ClassLoader.getSystemResources(basePackage.replace(DOT, FILE_SEPARATOR));
+            Enumeration<URL> systemResources = Thread.currentThread().getContextClassLoader()
+                    .getResources(basePackage.replace(DOT, FILE_SEPARATOR));
             while (systemResources.hasMoreElements()) {
                 URL url = systemResources.nextElement();
                 if (url != null) {
@@ -159,8 +164,8 @@ public class AnnotationUtil {
      * @return 如果注解定义了名称，直接返回；否则返回空字符串
      */
     static String getAnnotationName(Field field) {
-        Bean bean = field.getAnnotation(Bean.class);
-        Resource resource = field.getAnnotation(Resource.class);
+        Bean bean = getAnnotation(field, Bean.class);
+        Resource resource = getAnnotation(field, Resource.class);
         String name = "";
         if (bean != null) {
             name = bean.value();
@@ -171,27 +176,150 @@ public class AnnotationUtil {
     }
 
     /**
-     * 获取注解中定义的名称.
+     * Get a single {@link Annotation} of {@code annotationType} from the supplied
+     * Method, Constructor or Field. Meta-annotations will be searched if the annotation
+     * is not declared locally on the supplied element.
+     *
+     * @param ae             the Method, Constructor or Field from which to get the annotation
+     * @param annotationType the annotation class to look for, both locally and as a meta-annotation
+     * @return the matching annotation or {@code null} if not found
+     * @since 3.1
+     */
+    public static <T extends Annotation> T getAnnotation(AnnotatedElement ae, Class<T> annotationType) {
+        T ann = ae.getAnnotation(annotationType);
+        if (ann == null) {
+            for (Annotation metaAnn : ae.getAnnotations()) {
+                ann = metaAnn.annotationType().getAnnotation(annotationType);
+                if (ann != null) {
+                    break;
+                }
+            }
+        }
+        return ann;
+    }
+
+    /**
+     * Retrieve the <em>value</em> of the {@code &quot;value&quot;} attribute of a
+     * single-element Annotation, given an annotation instance.
+     *
+     * @param annotation the annotation instance from which to retrieve the value
+     * @return the attribute value, or {@code null} if not found
+     * @see #getValue(Annotation, String)
+     */
+    public static Object getValue(Annotation annotation) {
+        return getValue(annotation, VALUE);
+    }
+
+    /**
+     * Retrieve the <em>value</em> of a named Annotation attribute, given an annotation instance.
+     *
+     * @param annotation    the annotation instance from which to retrieve the value
+     * @param attributeName the name of the attribute value to retrieve
+     * @return the attribute value, or {@code null} if not found
+     * @see #getValue(Annotation)
+     */
+    public static Object getValue(Annotation annotation, String attributeName) {
+        try {
+            Method method = annotation.annotationType().getDeclaredMethod(attributeName);
+            return method.invoke(annotation);
+        } catch (Exception ex) {
+            return null;
+        }
+    }
+
+    /**
+     * Retrieve the <em>default value</em> of the {@code &quot;value&quot;} attribute
+     * of a single-element Annotation, given an annotation instance.
+     *
+     * @param annotation the annotation instance from which to retrieve the default value
+     * @return the default value, or {@code null} if not found
+     * @see #getDefaultValue(Annotation, String)
+     */
+    public static Object getDefaultValue(Annotation annotation) {
+        return getDefaultValue(annotation, VALUE);
+    }
+
+    /**
+     * Retrieve the <em>default value</em> of a named Annotation attribute, given an annotation instance.
+     *
+     * @param annotation    the annotation instance from which to retrieve the default value
+     * @param attributeName the name of the attribute value to retrieve
+     * @return the default value of the named attribute, or {@code null} if not found
+     * @see #getDefaultValue(Class, String)
+     */
+    public static Object getDefaultValue(Annotation annotation, String attributeName) {
+        return getDefaultValue(annotation.annotationType(), attributeName);
+    }
+
+    /**
+     * Retrieve the <em>default value</em> of the {@code &quot;value&quot;} attribute
+     * of a single-element Annotation, given the {@link Class annotation type}.
+     *
+     * @param annotationType the <em>annotation type</em> for which the default value should be retrieved
+     * @return the default value, or {@code null} if not found
+     * @see #getDefaultValue(Class, String)
+     */
+    public static Object getDefaultValue(Class<? extends Annotation> annotationType) {
+        return getDefaultValue(annotationType, VALUE);
+    }
+
+    /**
+     * Retrieve the <em>default value</em> of a named Annotation attribute, given the {@link Class annotation type}.
+     *
+     * @param annotationType the <em>annotation type</em> for which the default value should be retrieved
+     * @param attributeName  the name of the attribute value to retrieve.
+     * @return the default value of the named attribute, or {@code null} if not found
+     * @see #getDefaultValue(Annotation, String)
+     */
+    public static Object getDefaultValue(Class<? extends Annotation> annotationType, String attributeName) {
+        try {
+            Method method = annotationType.getDeclaredMethod(attributeName);
+            return method.getDefaultValue();
+        } catch (Exception ex) {
+            return null;
+        }
+    }
+
+    /**
+     * 获取注解(Bean/Controller/Service/Dao/Resource)中定义的名称.
      *
      * @return 如果注解定义了名称，返回名称，否则返回类名
      * @throws IllegalArgumentException 当类没有被注解时
      */
     static String getAnnotationName(Class<?> clazz) {
-        Bean beanAnnotation = clazz.getAnnotation(Bean.class);
-        Resource resourceAnnotation = clazz.getAnnotation(Resource.class);
+        Bean beanAnnotation = AnnotationUtil.getAnnotation(clazz, Bean.class);
+        Resource resourceAnnotation = AnnotationUtil.getAnnotation(clazz, Resource.class);
         if (beanAnnotation == null && resourceAnnotation == null) {
             throw new IllegalArgumentException("No @Bean or @Resource annotation at this object.");
         }
         String name;
         if (beanAnnotation != null) {
-            name = beanAnnotation.value();
+            name = (String) getValue(clazz, beanAnnotation);
         } else {
-            name = resourceAnnotation.name();
+            name = (String) getValue(clazz, resourceAnnotation, "name");
         }
-        if (name.isEmpty()) {
+        if (name == null || name.isEmpty()) {
             name = clazz.getSimpleName();
         }
         return name;
+    }
+
+    public static Object getValue(AnnotatedElement ae, Annotation annotation) {
+        return getValue(ae, annotation, VALUE);
+    }
+
+    public static Object getValue(AnnotatedElement ae, Annotation annotation, String attributeName) {
+        Annotation anno = ae.getAnnotation(annotation.annotationType());
+        if (anno != null) {//anno 直接注解在 clazz 上
+            return getValue(anno, attributeName);
+        }
+        for (Annotation at : ae.getAnnotations()) {
+            Annotation ata = at.annotationType().getAnnotation(annotation.annotationType());
+            if (ata != null) {//ata 注解在 at 上, at 注解在 clazz 上
+                return getValue(at, attributeName);
+            }
+        }
+        return null;
     }
 
     /**

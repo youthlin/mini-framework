@@ -7,6 +7,7 @@
     <groupId>com.youthlin</groupId>
     <artifactId>mini-framework</artifactId>
     <packaging>pom</packaging>
+    <!-- mvn versions:set -DnewVersion=x.x.x -->
     <version>1.0.1-SNAPSHOT</version>
     <modules>
         <module>mini-ioc</module>
@@ -35,6 +36,12 @@
                 <version>${logback.version}</version>
             </dependency>
 
+            <dependency>
+                <groupId>javax.servlet</groupId>
+                <artifactId>javax.servlet-api</artifactId>
+                <version>3.1.0</version>
+                <scope>provided</scope>
+            </dependency>
 
         </dependencies>
     </dependencyManagement>

@@ -7,9 +7,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Resource;
+import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -33,6 +35,7 @@ public class SimpleAnnotationProcessor implements IAnnotationProcessor {
     protected Map<Class, Object> clazzBeanMap = new ConcurrentHashMap<>();
     protected Set<String> classNames = new HashSet<>();
     protected Set<String> unloadedClassName = new HashSet<>();
+    protected Map<Annotation, Set<Class>> annotationClassMap = new HashMap<>();
 
     /**
      * 对包路径进行自动扫描
@@ -87,8 +90,12 @@ public class SimpleAnnotationProcessor implements IAnnotationProcessor {
         try {
             //会触发类的 static 块，但不会触发构造函数和实例初始化块
             Class<?> aClass = Class.forName(className);
-            Bean beanAnnotation = aClass.getAnnotation(Bean.class);
-            Resource annotation = aClass.getAnnotation(Resource.class);
+            if (aClass.isAnnotation()) {
+                LOGGER.trace("skip register annotation {}", aClass);
+                return;
+            }
+            Bean beanAnnotation = AnnotationUtil.getAnnotation(aClass, Bean.class);
+            Resource annotation = AnnotationUtil.getAnnotation(aClass, Resource.class);
             if (beanAnnotation != null || annotation != null) {
                 String name = AnnotationUtil.getAnnotationName(aClass);
                 Object o = aClass.newInstance();
