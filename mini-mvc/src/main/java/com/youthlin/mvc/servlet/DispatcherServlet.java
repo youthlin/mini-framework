@@ -67,6 +67,9 @@ public class DispatcherServlet extends HttpServlet {
         Method method = controllerAndMethod.getMethod();
         try {
             Object[] parameter = injectParameter(req, resp, method);
+            if (LOGGER.isDebugEnabled()) {
+                LOGGER.debug("parameter: {}", Arrays.deepToString(parameter));
+            }
             Object ret = method.invoke(controller, parameter);
             LOGGER.debug("invoke ret: {}", ret);
             peocessInvokeResult(ret, req, resp, controllerAndMethod);
@@ -99,25 +102,27 @@ public class DispatcherServlet extends HttpServlet {
                     continue;
                 }
                 String value = getParameter(req, param);
-                if (parameterType.isAssignableFrom(double.class)) {
+                if (parameterType.isAssignableFrom(double.class) || parameterType.isAssignableFrom(Double.class)) {
                     parameter[i] = Double.parseDouble(value);
-                } else if (parameterType.isAssignableFrom(float.class)) {
+                } else if (parameterType.isAssignableFrom(float.class) || parameterType.isAssignableFrom(Float.class)) {
                     parameter[i] = Float.parseFloat(value);
-                } else if (parameterType.isAssignableFrom(long.class)) {
+                } else if (parameterType.isAssignableFrom(long.class) || parameterType.isAssignableFrom(Long.class)) {
                     parameter[i] = Long.parseLong(value);
-                } else if (parameterType.isAssignableFrom(int.class)) {
+                } else if (parameterType.isAssignableFrom(int.class) || parameterType.isAssignableFrom(Integer.class)) {
                     parameter[i] = Integer.parseInt(value);
-                } else if (parameterType.isAssignableFrom(short.class)) {
+                } else if (parameterType.isAssignableFrom(short.class) || parameterType.isAssignableFrom(Short.class)) {
                     parameter[i] = Short.parseShort(value);
-                } else if (parameterType.isAssignableFrom(byte.class)) {
+                } else if (parameterType.isAssignableFrom(byte.class) || parameterType.isAssignableFrom(Byte.class)) {
                     parameter[i] = Byte.parseByte(value);
-                } else if (parameterType.isAssignableFrom(boolean.class)) {
+                } else if (parameterType.isAssignableFrom(boolean.class)
+                        || parameterType.isAssignableFrom(Boolean.class)) {
                     parameter[i] = Boolean.parseBoolean(value);
-                } else if (parameterType.isAssignableFrom(char.class)) {
+                } else if (parameterType.isAssignableFrom(char.class)
+                        || parameterType.isAssignableFrom(Character.class)) {
                     if (value.length() == 1) {
                         parameter[i] = value.charAt(0);
                     } else {
-                        throw new IllegalArgumentException(value + " can not cast to char.");
+                        throw new IllegalArgumentException('\"' + value + "\" can not cast to char.");
                     }
                 }
             } else if (parameterType.isAssignableFrom(Map.class)) {
@@ -168,7 +173,7 @@ public class DispatcherServlet extends HttpServlet {
         }
         String value = request.getParameter(name);
         if (param.required() && value == null) {
-            throw new IllegalArgumentException(name + " is required.");
+            throw new IllegalArgumentException("parameter " + name + " is required.");
         }
         String defaultValue = param.defaultValue();
         if (value == null) {
@@ -178,11 +183,12 @@ public class DispatcherServlet extends HttpServlet {
     }
 
     private <T> T injectJavaBean(HttpServletRequest request, Class<T> classType) {
-        return null;
+        return null;//todo 支持在方法列表上直接写 POJO
     }
 
     protected void processNoMatch(HttpServletRequest req, HttpServletResponse resp)
             throws ServletException, IOException {
+        resp.setContentType("text/plain");
         PrintWriter out = resp.getWriter();
         out.println(req.getMethod() + " " + req.getRequestURI());
         out.println("No matched Controller.");
