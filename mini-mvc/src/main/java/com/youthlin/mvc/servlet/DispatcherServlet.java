@@ -1,16 +1,19 @@
 package com.youthlin.mvc.servlet;
 
 import com.youthlin.ioc.annotaion.AnnotationUtil;
+import com.youthlin.ioc.context.Context;
 import com.youthlin.mvc.annotation.Param;
 import com.youthlin.mvc.annotation.ResponseBody;
 import com.youthlin.mvc.listener.ContextLoaderListener;
 import com.youthlin.mvc.mapping.ControllerAndMethod;
 import com.youthlin.mvc.mapping.URLAndMethods;
+import com.youthlin.mvc.support.ExceptionHandler;
+import com.youthlin.mvc.support.Order;
+import com.youthlin.mvc.support.ResponseBodyHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.servlet.ServletException;
-import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -19,9 +22,11 @@ import java.io.PrintWriter;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.TreeSet;
 
 /**
  * 创建： youthlin.chen
@@ -32,6 +37,37 @@ public class DispatcherServlet extends HttpServlet {
     private static final Logger LOGGER = LoggerFactory.getLogger(DispatcherServlet.class);
     public static final String REDIRECT = "redirect:";
     public static final String FORWARD = "forward:";
+    private static final Comparator<Order> ORDER_COMPARATOR = new Comparator<Order>() {
+        @Override public int compare(Order o1, Order o2) {
+            return o1.getOrder() - o2.getOrder();
+        }
+    };
+    private static final ResponseBodyHandler DEFAULT_RESPONSE_BODY_HANDLER = new ResponseBodyHandler() {
+        @Override public boolean accept(Method controllerMethod) {
+            return true;
+        }
+
+        @Override public void handler(HttpServletRequest request, HttpServletResponse response, Object result)
+                throws ServletException, IOException {
+            response.getWriter().println(result.toString());
+        }
+
+        @Override public int getOrder() {
+            return 0;
+        }
+    };
+    private static final ExceptionHandler DEFAULT_EXCEPTION_HANDLER = new ExceptionHandler() {
+        @Override public void handler(Throwable t, HttpServletRequest request, HttpServletResponse response,
+                Object controller, Method controllerMethod) {
+            LOGGER.error("Error when process {} {} , controller:{} method:{}", request.getMethod(),
+                    request.getRequestURI(), controller, controllerMethod, t);
+            throw new RuntimeException(t);
+        }
+
+        @Override public int getOrder() {
+            return 0;
+        }
+    };
 
     /**
      * 重写 service 方法.  当请求路径有映射的 Controller 时 将请求分发到 Controller 上
@@ -81,8 +117,7 @@ public class DispatcherServlet extends HttpServlet {
         } catch (ServletException | IOException e) {
             throw e;
         } catch (Throwable e) {
-            LOGGER.error("{}", controllerAndMethod, e);
-            throw new RuntimeException(e);
+            processException(e, req, resp, controllerAndMethod);
         }
     }
 
@@ -99,17 +134,28 @@ public class DispatcherServlet extends HttpServlet {
                 parameter[i] = req;
             } else if (parameterType.isAssignableFrom(HttpServletResponse.class)) {
                 parameter[i] = resp;
-            } else if (parameterType.isAssignableFrom(String.class)) {
-                if (param == null) {
-                    continue;
+            } else if (parameterType.isAssignableFrom(Map.class)) {
+                HashMap<String, Object> map = new HashMap<>();
+                parameter[i] = map;
+                Enumeration<String> parameterNames = req.getParameterNames();
+                while (parameterNames.hasMoreElements()) {
+                    String parameterName = parameterNames.nextElement();
+                    String[] parameterValues = req.getParameterValues(parameterName);
+                    if (parameterValues.length == 1) {
+                        map.put(parameterName, parameterValues[0]);
+                    } else {
+                        map.put(parameterName, parameterValues);
+                    }
                 }
-                parameter[i] = getParameter(req, param);
-            } else if (parameterType.isPrimitive()) {
+            } else {
                 if (param == null) {
                     continue;
                 }
                 String value = getParameter(req, param);
-                if (parameterType.isAssignableFrom(double.class) || parameterType.isAssignableFrom(Double.class)) {
+                if (parameterType.isAssignableFrom(String.class)) {
+                    parameter[i] = getParameter(req, param);
+                } else if (parameterType.isAssignableFrom(double.class) || parameterType
+                        .isAssignableFrom(Double.class)) {
                     parameter[i] = Double.parseDouble(value);
                 } else if (parameterType.isAssignableFrom(float.class) || parameterType.isAssignableFrom(Float.class)) {
                     parameter[i] = Float.parseFloat(value);
@@ -131,22 +177,9 @@ public class DispatcherServlet extends HttpServlet {
                     } else {
                         throw new IllegalArgumentException('\"' + value + "\" can not cast to char.");
                     }
+                } else {
+                    parameter[i] = injectJavaBean(req, parameterType);
                 }
-            } else if (parameterType.isAssignableFrom(Map.class)) {
-                HashMap<String, Object> map = new HashMap<>();
-                parameter[i] = map;
-                Enumeration<String> parameterNames = req.getParameterNames();
-                while (parameterNames.hasMoreElements()) {
-                    String parameterName = parameterNames.nextElement();
-                    String[] parameterValues = req.getParameterValues(parameterName);
-                    if (parameterValues.length == 1) {
-                        map.put(parameterName, parameterValues[0]);
-                    } else {
-                        map.put(parameterName, parameterValues);
-                    }
-                }
-            } else {
-                parameter[i] = injectJavaBean(req, parameterType);
             }
         }
         return parameter;
@@ -203,15 +236,23 @@ public class DispatcherServlet extends HttpServlet {
     }
 
     protected void processInvokeResult(Object result, HttpServletRequest req, HttpServletResponse resp,
-                                       ControllerAndMethod controllerAndMethod) throws IOException, ServletException {
+            ControllerAndMethod controllerAndMethod) throws IOException, ServletException {
         Method method = controllerAndMethod.getMethod();
         ResponseBody responseBody = AnnotationUtil.getAnnotation(method, ResponseBody.class);
         if (responseBody != null) {
-            //返回对象：json
-//            resp.setContentType("application/json;charset=UTF-8");
-//            PrintWriter out = resp.getWriter();
-//            ServletOutputStream stream = resp.getOutputStream();
-
+            Context context = getContext();
+            TreeSet<ResponseBodyHandler> responseBodyHandlers = new TreeSet<>(ORDER_COMPARATOR);
+            responseBodyHandlers.addAll(context.getBeans(ResponseBodyHandler.class));
+            boolean processed = false;
+            for (ResponseBodyHandler responseBodyHandler : responseBodyHandlers) {
+                if (responseBodyHandler.accept(method)) {
+                    processed = true;
+                    responseBodyHandler.handler(req, resp, result);
+                }
+            }
+            if (!processed) {
+                DEFAULT_RESPONSE_BODY_HANDLER.handler(req, resp, result);
+            }
         } else {
             //返回字符串：页面
             if (result instanceof String) {
@@ -226,9 +267,29 @@ public class DispatcherServlet extends HttpServlet {
                 String suffix = (String) super.getServletContext().getAttribute(ContextLoaderListener.VIEW_SUFFIX);
                 req.getRequestDispatcher(prefix + result + suffix).forward(req, resp);
             } else {
-                throw new RuntimeException("You can only return String value when there is no @ResponseBody on method.");
+                throw new RuntimeException(
+                        "You can only return String value when there is no @ResponseBody on method.");
             }
         }
+    }
+
+    protected void processException(Throwable t, HttpServletRequest req, HttpServletResponse resp,
+            ControllerAndMethod controllerAndMethod) {
+        Context context = getContext();
+        TreeSet<ExceptionHandler> exceptionHandlers = new TreeSet<>(ORDER_COMPARATOR);
+        exceptionHandlers.addAll(context.getBeans(ExceptionHandler.class));
+        if (exceptionHandlers.isEmpty()) {
+            DEFAULT_EXCEPTION_HANDLER
+                    .handler(t, req, resp, controllerAndMethod.getController(), controllerAndMethod.getMethod());
+        }
+        for (ExceptionHandler exceptionHandler : exceptionHandlers) {
+            exceptionHandler
+                    .handler(t, req, resp, controllerAndMethod.getController(), controllerAndMethod.getMethod());
+        }
+    }
+
+    public Context getContext() {
+        return (Context) super.getServletContext().getAttribute(ContextLoaderListener.CONTAINER);
     }
 
 }

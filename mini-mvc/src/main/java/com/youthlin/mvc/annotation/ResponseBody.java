@@ -9,7 +9,7 @@ import java.lang.annotation.Target;
  * 创建：youthlin.chen
  * 时间：2017-08-13 23:29
  */
-@Target({ ElementType.METHOD })
+@Target({ ElementType.METHOD, ElementType.ANNOTATION_TYPE })
 @Retention(RetentionPolicy.RUNTIME)
 public @interface ResponseBody {
 }
