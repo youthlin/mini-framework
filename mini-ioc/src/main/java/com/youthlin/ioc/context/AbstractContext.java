@@ -4,6 +4,7 @@ import com.youthlin.ioc.annotaion.AnnotationUtil;
 import com.youthlin.ioc.annotaion.IAnnotationProcessor;
 import com.youthlin.ioc.annotaion.SimpleAnnotationProcessor;
 import com.youthlin.ioc.exception.BeanDefinitionException;
+import com.youthlin.ioc.exception.NoSuchBeanException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -61,7 +62,11 @@ public abstract class AbstractContext implements Context {
 
     @SuppressWarnings("unchecked")
     @Override public <T> T getBean(Class<T> clazz) {
-        return AnnotationUtil.getBean(getClazzBeanMap(), clazz);
+        try {
+            return AnnotationUtil.getBean(getClazzBeanMap(), clazz);
+        } catch (NoSuchBeanException e) {
+            return null;
+        }
     }
 
     @SuppressWarnings("unchecked")

@@ -41,6 +41,9 @@ public class ContextLoaderListener implements ServletContextListener {
         LOGGER.debug("构造 ContextLoaderListener");
     }
 
+    /**
+     * 容器启动时自动执行
+     */
     @Override
     public void contextInitialized(ServletContextEvent sce) {
         LOGGER.debug("contextInitialized sce = {}", sce);
@@ -52,21 +55,21 @@ public class ContextLoaderListener implements ServletContextListener {
     private void init(ServletContextEvent sce) {
         ServletContext servletContext = sce.getServletContext();
         LOGGER.debug("servlet context = {}, source = {}", servletContext, sce.getSource());
-        servletContext.setAttribute(VIEW_PREFIX,"");
-        servletContext.setAttribute(VIEW_SUFFIX,"");
+        servletContext.setAttribute(VIEW_PREFIX, "");
+        servletContext.setAttribute(VIEW_SUFFIX, "");
         Enumeration<String> initParameterNames = servletContext.getInitParameterNames();
         while (initParameterNames.hasMoreElements()) {
             String parameterName = initParameterNames.nextElement();
             String initParameterValue = servletContext.getInitParameter(parameterName);
             if (parameterName.equals(VIEW_PREFIX_PARAM_NAME)) {
-                servletContext.setAttribute(VIEW_PREFIX,initParameterValue);
+                servletContext.setAttribute(VIEW_PREFIX, initParameterValue);
             } else if (parameterName.equals(VIEW_SUFFIX_PARAM_NAME)) {
                 servletContext.setAttribute(VIEW_SUFFIX, initParameterValue);
             }
             LOGGER.debug("name = {}, value = {}", parameterName, initParameterValue);
         }
         String scan = servletContext.getInitParameter("scan");
-        String[] scanPackages = {""};
+        String[] scanPackages = { "" };
         if (scan != null) {
             scanPackages = scan.split("\\s|,|;");
         }

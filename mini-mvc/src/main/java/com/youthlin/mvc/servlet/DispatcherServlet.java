@@ -29,6 +29,7 @@ import java.util.Map;
 import java.util.TreeSet;
 
 /**
+ * 路由类，将各个请求分发至具体的 Controller 上的方法
  * 创建： youthlin.chen
  * 时间： 2017-08-13 15:43.
  */
@@ -37,11 +38,17 @@ public class DispatcherServlet extends HttpServlet {
     private static final Logger LOGGER = LoggerFactory.getLogger(DispatcherServlet.class);
     public static final String REDIRECT = "redirect:";
     public static final String FORWARD = "forward:";
+    /**
+     * 排序比较器
+     */
     private static final Comparator<Order> ORDER_COMPARATOR = new Comparator<Order>() {
         @Override public int compare(Order o1, Order o2) {
             return o1.getOrder() - o2.getOrder();
         }
     };
+    /**
+     * 默认 ResponseBody 处理器, 直接将返回值 toString 输出
+     */
     private static final ResponseBodyHandler DEFAULT_RESPONSE_BODY_HANDLER = new ResponseBodyHandler() {
         @Override public boolean accept(Method controllerMethod) {
             return true;
@@ -56,6 +63,9 @@ public class DispatcherServlet extends HttpServlet {
             return 0;
         }
     };
+    /**
+     * 默认异常处理器，直接抛出异常
+     */
     private static final ExceptionHandler DEFAULT_EXCEPTION_HANDLER = new ExceptionHandler() {
         @Override public void handler(Throwable t, HttpServletRequest request, HttpServletResponse response,
                 Object controller, Method controllerMethod) {
@@ -102,6 +112,9 @@ public class DispatcherServlet extends HttpServlet {
         processNoMatch(req, resp);
     }
 
+    /**
+     * 将请求打到 Controller 方法上
+     */
     private void dispatch(HttpServletRequest req, HttpServletResponse resp, ControllerAndMethod controllerAndMethod)
             throws ServletException, IOException {
         Object controller = controllerAndMethod.getController();
@@ -226,6 +239,9 @@ public class DispatcherServlet extends HttpServlet {
         return null;//todo 支持在方法列表上直接写 POJO
     }
 
+    /**
+     * 没有匹配到 Controller
+     */
     protected void processNoMatch(HttpServletRequest req, HttpServletResponse resp)
             throws ServletException, IOException {
         resp.setContentType("text/plain;charset=UTF-8");
@@ -235,6 +251,9 @@ public class DispatcherServlet extends HttpServlet {
         out.println("No matched Controller.");
     }
 
+    /**
+     * 处理 Controller 方法返回值
+     */
     protected void processInvokeResult(Object result, HttpServletRequest req, HttpServletResponse resp,
             ControllerAndMethod controllerAndMethod) throws IOException, ServletException {
         Method method = controllerAndMethod.getMethod();
@@ -273,6 +292,9 @@ public class DispatcherServlet extends HttpServlet {
         }
     }
 
+    /**
+     * 异常处理
+     */
     protected void processException(Throwable t, HttpServletRequest req, HttpServletResponse resp,
             ControllerAndMethod controllerAndMethod) {
         Context context = getContext();
