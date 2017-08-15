@@ -17,7 +17,7 @@ import java.lang.reflect.Method;
  * 创建： youthlin.chen
  * 时间： 2017-08-14 16:05.
  */
-public interface ResponseBodyHandler extends Order {
+public interface ResponseBodyHandler extends Ordered {
     /**
      * 是否处理调用的返回值
      *

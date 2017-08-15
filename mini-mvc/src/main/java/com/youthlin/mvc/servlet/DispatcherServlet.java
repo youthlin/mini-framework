@@ -2,13 +2,15 @@ package com.youthlin.mvc.servlet;
 
 import com.youthlin.ioc.annotaion.AnnotationUtil;
 import com.youthlin.ioc.context.Context;
+import com.youthlin.mvc.NestedServletException;
 import com.youthlin.mvc.annotation.Param;
 import com.youthlin.mvc.annotation.ResponseBody;
 import com.youthlin.mvc.listener.ContextLoaderListener;
 import com.youthlin.mvc.mapping.ControllerAndMethod;
 import com.youthlin.mvc.mapping.URLAndMethods;
 import com.youthlin.mvc.support.ExceptionHandler;
-import com.youthlin.mvc.support.Order;
+import com.youthlin.mvc.support.Interceptor;
+import com.youthlin.mvc.support.Ordered;
 import com.youthlin.mvc.support.ResponseBodyHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,12 +23,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.Enumeration;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.TreeSet;
+import java.util.*;
 
 /**
  * 路由类，将各个请求分发至具体的 Controller 上的方法
@@ -38,28 +35,25 @@ public class DispatcherServlet extends HttpServlet {
     private static final Logger LOGGER = LoggerFactory.getLogger(DispatcherServlet.class);
     public static final String REDIRECT = "redirect:";
     public static final String FORWARD = "forward:";
-    /**
-     * 排序比较器
-     */
-    private static final Comparator<Order> ORDER_COMPARATOR = new Comparator<Order>() {
-        @Override public int compare(Order o1, Order o2) {
-            return o1.getOrder() - o2.getOrder();
-        }
-    };
+    private ArrayList<Interceptor> interceptorList;
+    private int interceptorIndex = -1;
     /**
      * 默认 ResponseBody 处理器, 直接将返回值 toString 输出
      */
     private static final ResponseBodyHandler DEFAULT_RESPONSE_BODY_HANDLER = new ResponseBodyHandler() {
-        @Override public boolean accept(Method controllerMethod) {
+        @Override
+        public boolean accept(Method controllerMethod) {
             return true;
         }
 
-        @Override public void handler(HttpServletRequest request, HttpServletResponse response, Object result)
+        @Override
+        public void handler(HttpServletRequest request, HttpServletResponse response, Object result)
                 throws ServletException, IOException {
             response.getWriter().println(result.toString());
         }
 
-        @Override public int getOrder() {
+        @Override
+        public int getOrder() {
             return 0;
         }
     };
@@ -67,20 +61,23 @@ public class DispatcherServlet extends HttpServlet {
      * 默认异常处理器，直接抛出异常
      */
     private static final ExceptionHandler DEFAULT_EXCEPTION_HANDLER = new ExceptionHandler() {
-        @Override public void handler(Throwable t, HttpServletRequest request, HttpServletResponse response,
-                Object controller, Method controllerMethod) {
+        @Override
+        public void handler(Throwable t, HttpServletRequest request, HttpServletResponse response,
+                            Object controller, Method controllerMethod) {
             LOGGER.error("Error when process {} {} , controller:{} method:{}", request.getMethod(),
                     request.getRequestURI(), controller, controllerMethod, t);
             throw new RuntimeException(t);
         }
 
-        @Override public int getOrder() {
+        @Override
+        public int getOrder() {
             return 0;
         }
     };
 
     /**
      * 重写 service 方法.  当请求路径有映射的 Controller 时 将请求分发到 Controller 上
+     * //todo 不应重写 service 这样不能处理 HEAD 等 method
      */
     @Override
     protected void service(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
@@ -106,7 +103,17 @@ public class DispatcherServlet extends HttpServlet {
             }
         }
         if (controllerAndMethod != null) {
-            dispatch(req, resp, controllerAndMethod);
+            try {
+                dispatch(req, resp, controllerAndMethod);
+            } catch (Throwable e) {
+                if (e instanceof ServletException) {
+                    throw (ServletException) e;
+                }
+                if (e instanceof IOException) {
+                    throw (IOException) e;
+                }
+                throw new ServletException(e);
+            }
             return;
         }
         processNoMatch(req, resp);
@@ -115,22 +122,32 @@ public class DispatcherServlet extends HttpServlet {
     /**
      * 将请求打到 Controller 方法上
      */
-    private void dispatch(HttpServletRequest req, HttpServletResponse resp, ControllerAndMethod controllerAndMethod)
-            throws ServletException, IOException {
+    private void dispatch(HttpServletRequest req, HttpServletResponse resp, ControllerAndMethod controllerAndMethod) throws Throwable {
         Object controller = controllerAndMethod.getController();
         Method method = controllerAndMethod.getMethod();
+        Throwable exception = null;
         try {
             Object[] parameter = injectParameter(req, resp, method);
             if (LOGGER.isDebugEnabled()) {
                 LOGGER.debug("parameter: {}", Arrays.deepToString(parameter));
             }
+            if (preHandle(req, resp, controller)) {
+                return;
+            }
             Object ret = method.invoke(controller, parameter);
+            postHandle(req, resp, controller, ret);
             LOGGER.debug("invoke ret: {}", ret);
             processInvokeResult(ret, req, resp, controllerAndMethod);
-        } catch (ServletException | IOException e) {
-            throw e;
         } catch (Throwable e) {
-            processException(e, req, resp, controllerAndMethod);
+            exception = e;
+        } finally {
+            try {
+                if (exception != null) {
+                    processException(exception, req, resp, controllerAndMethod);
+                }
+            } finally {
+                afterCompletion(req, resp, controller, exception);
+            }
         }
     }
 
@@ -251,16 +268,45 @@ public class DispatcherServlet extends HttpServlet {
         out.println("No matched Controller.");
     }
 
+    protected boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object controller) throws Exception {
+        ArrayList<Interceptor> interceptors = getSortedInterceptors();
+        String uri = request.getRequestURI();
+        int size = interceptors.size();
+        interceptorIndex = -1;
+        for (int i = 0; i < size; i++) {
+            Interceptor interceptor = interceptors.get(i);
+            if (interceptor.accept(uri)) {
+                if (!interceptor.preHandle(request, response, controller)) {
+                    return false;
+                }
+            }
+            interceptorIndex = i;
+
+        }
+        return true;
+    }
+
+    protected void postHandle(HttpServletRequest request, HttpServletResponse response, Object controller, Object result) throws Exception {
+        ArrayList<Interceptor> interceptors = getSortedInterceptors();
+        String uri = request.getRequestURI();
+        for (Interceptor interceptor : interceptors) {
+            if (interceptor.accept(uri)) {
+                interceptor.postHandle(request, response, controller, result);
+            }
+        }
+    }
+
+
     /**
      * 处理 Controller 方法返回值
      */
     protected void processInvokeResult(Object result, HttpServletRequest req, HttpServletResponse resp,
-            ControllerAndMethod controllerAndMethod) throws IOException, ServletException {
+                                       ControllerAndMethod controllerAndMethod) throws IOException, ServletException {
         Method method = controllerAndMethod.getMethod();
         ResponseBody responseBody = AnnotationUtil.getAnnotation(method, ResponseBody.class);
         if (responseBody != null) {
             Context context = getContext();
-            TreeSet<ResponseBodyHandler> responseBodyHandlers = new TreeSet<>(ORDER_COMPARATOR);
+            TreeSet<ResponseBodyHandler> responseBodyHandlers = new TreeSet<>(Ordered.ORDERED_COMPARATOR);
             responseBodyHandlers.addAll(context.getBeans(ResponseBodyHandler.class));
             boolean processed = false;
             for (ResponseBodyHandler responseBodyHandler : responseBodyHandlers) {
@@ -292,26 +338,56 @@ public class DispatcherServlet extends HttpServlet {
         }
     }
 
+
+    protected void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object controller, Throwable e) {
+        List<Interceptor> sortedInterceptors = getSortedInterceptors();
+        String uri = request.getRequestURI();
+        for (int i = interceptorIndex; i >= 0; i--) {
+            Interceptor interceptor = sortedInterceptors.get(i);
+            if (interceptor.accept(uri)) {
+                try {
+                    interceptor.afterCompletion(request, response, controller, e);
+                } catch (Throwable t) {
+                    LOGGER.error("HandlerInterceptor.afterCompletion threw exception", t);
+                }
+            }
+        }
+    }
+
     /**
      * 异常处理
      */
-    protected void processException(Throwable t, HttpServletRequest req, HttpServletResponse resp,
-            ControllerAndMethod controllerAndMethod) {
+    protected void processException(Throwable e, HttpServletRequest req, HttpServletResponse resp,
+                                    ControllerAndMethod controllerAndMethod) throws Exception {
         Context context = getContext();
-        TreeSet<ExceptionHandler> exceptionHandlers = new TreeSet<>(ORDER_COMPARATOR);
+        TreeSet<ExceptionHandler> exceptionHandlers = new TreeSet<>(Ordered.ORDERED_COMPARATOR);
         exceptionHandlers.addAll(context.getBeans(ExceptionHandler.class));
         if (exceptionHandlers.isEmpty()) {
             DEFAULT_EXCEPTION_HANDLER
-                    .handler(t, req, resp, controllerAndMethod.getController(), controllerAndMethod.getMethod());
+                    .handler(e, req, resp, controllerAndMethod.getController(), controllerAndMethod.getMethod());
         }
         for (ExceptionHandler exceptionHandler : exceptionHandlers) {
-            exceptionHandler
-                    .handler(t, req, resp, controllerAndMethod.getController(), controllerAndMethod.getMethod());
+            try {
+                exceptionHandler
+                        .handler(e, req, resp, controllerAndMethod.getController(), controllerAndMethod.getMethod());
+            } catch (Throwable e1) {
+                LOGGER.error("Exception handler throws a exception!", e1);
+            }
         }
     }
 
     public Context getContext() {
         return (Context) super.getServletContext().getAttribute(ContextLoaderListener.CONTAINER);
+    }
+
+    public ArrayList<Interceptor> getSortedInterceptors() {
+        Set<Interceptor> interceptorSet = getContext().getBeans(Interceptor.class);
+        if (interceptorList == null || interceptorSet.size() != interceptorList.size()) {
+            interceptorList = new ArrayList<>();
+            interceptorList.addAll(interceptorSet);
+            Collections.sort(interceptorList, Ordered.ORDERED_COMPARATOR);
+        }
+        return interceptorList;
     }
 
 }

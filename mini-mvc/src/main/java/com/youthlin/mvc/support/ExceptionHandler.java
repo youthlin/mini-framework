@@ -9,7 +9,7 @@ import java.lang.reflect.Method;
  * 创建： youthlin.chen
  * 时间： 2017-08-14 16:23.
  */
-public interface ExceptionHandler extends Order {
+public interface ExceptionHandler extends Ordered {
     /**
      * 当处理请求时发生异常将会调用此方法
      *
@@ -18,5 +18,5 @@ public interface ExceptionHandler extends Order {
      * @param controllerMethod Controller 中处理该请求的方法
      */
     void handler(Throwable t, HttpServletRequest request, HttpServletResponse response, Object controller,
-            Method controllerMethod);
+            Method controllerMethod) throws Throwable;
 }
