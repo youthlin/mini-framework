@@ -8,7 +8,7 @@ import java.util.Comparator;
  * 时间： 2017-08-14 16:06.
  */
 public interface Ordered {
-    Comparator<Ordered> ORDERED_COMPARATOR = new Comparator<Ordered>() {
+    Comparator<Ordered> DEFAULT_ORDERED_COMPARATOR = new Comparator<Ordered>() {
         @Override
         public int compare(Ordered o1, Ordered o2) {
             return o1.getOrder() - o2.getOrder();

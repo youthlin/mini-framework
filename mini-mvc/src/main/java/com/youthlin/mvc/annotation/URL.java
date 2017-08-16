@@ -15,6 +15,6 @@ import java.lang.annotation.Target;
 public @interface URL {
     String value() default "";
 
-    Method[] method() default {};
+    HttpMethod[] method() default {};
 
 }

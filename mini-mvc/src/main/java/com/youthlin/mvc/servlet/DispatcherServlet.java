@@ -2,13 +2,12 @@ package com.youthlin.mvc.servlet;
 
 import com.youthlin.ioc.annotaion.AnnotationUtil;
 import com.youthlin.ioc.context.Context;
-import com.youthlin.mvc.NestedServletException;
+import com.youthlin.mvc.annotation.HttpMethod;
 import com.youthlin.mvc.annotation.Param;
 import com.youthlin.mvc.annotation.ResponseBody;
 import com.youthlin.mvc.listener.ContextLoaderListener;
 import com.youthlin.mvc.mapping.ControllerAndMethod;
 import com.youthlin.mvc.mapping.URLAndMethods;
-import com.youthlin.mvc.support.ExceptionHandler;
 import com.youthlin.mvc.support.Interceptor;
 import com.youthlin.mvc.support.Ordered;
 import com.youthlin.mvc.support.ResponseBodyHandler;
@@ -20,10 +19,10 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.util.*;
+
 
 /**
  * 路由类，将各个请求分发至具体的 Controller 上的方法
@@ -49,7 +48,9 @@ public class DispatcherServlet extends HttpServlet {
         @Override
         public void handler(HttpServletRequest request, HttpServletResponse response, Object result)
                 throws ServletException, IOException {
-            response.getWriter().println(result.toString());
+            if (result != null) {
+                response.getWriter().println(result.toString());
+            }
         }
 
         @Override
@@ -57,27 +58,19 @@ public class DispatcherServlet extends HttpServlet {
             return 0;
         }
     };
-    /**
-     * 默认异常处理器，直接抛出异常
-     */
-    private static final ExceptionHandler DEFAULT_EXCEPTION_HANDLER = new ExceptionHandler() {
-        @Override
-        public void handler(Throwable t, HttpServletRequest request, HttpServletResponse response,
-                            Object controller, Method controllerMethod) {
-            LOGGER.error("Error when process {} {} , controller:{} method:{}", request.getMethod(),
-                    request.getRequestURI(), controller, controllerMethod, t);
-            throw new RuntimeException(t);
-        }
 
-        @Override
-        public int getOrder() {
-            return 0;
-        }
-    };
+    public Context getContext() {
+        return (Context) super.getServletContext().getAttribute(ContextLoaderListener.CONTAINER);
+    }
+
+    @SuppressWarnings("unchecked")
+    public Map<URLAndMethods, ControllerAndMethod> getUrlMappingMap() {
+        return (Map<URLAndMethods, ControllerAndMethod>)
+                super.getServletContext().getAttribute(ContextLoaderListener.URL_MAPPING_MAP);
+    }
 
     /**
      * 重写 service 方法.  当请求路径有映射的 Controller 时 将请求分发到 Controller 上
-     * //todo 不应重写 service 这样不能处理 HEAD 等 method
      */
     @Override
     protected void service(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
@@ -85,38 +78,37 @@ public class DispatcherServlet extends HttpServlet {
         String uri = req.getRequestURI();
         LOGGER.debug("uri = {}, method = {}", uri, reqMethod);
         @SuppressWarnings("unchecked")
-        Map<URLAndMethods, ControllerAndMethod> urlMappingMap = (Map<URLAndMethods, ControllerAndMethod>)
-                super.getServletContext().getAttribute(ContextLoaderListener.URL_MAPPING_MAP);
+        Map<URLAndMethods, ControllerAndMethod> urlMappingMap = getUrlMappingMap();
         URLAndMethods urlAndMethods = new URLAndMethods(uri, URLAndMethods.method(reqMethod));
         ControllerAndMethod controllerAndMethod = urlMappingMap.get(urlAndMethods);
         if (controllerAndMethod == null) {
-            urlAndMethods = new URLAndMethods(uri, URLAndMethods.EMPTY_METHODS);
+            urlAndMethods = new URLAndMethods(uri, URLAndMethods.EMPTY_HTTP_METHODS);
             controllerAndMethod = urlMappingMap.get(urlAndMethods);
         }
         int lastIndexOfDot = uri.lastIndexOf(".");
-        if (lastIndexOfDot > 0) {// url:/get/some.html -> /get/some
+        if (controllerAndMethod == null && lastIndexOfDot > 0) {// url:/get/some.html -> /get/some
             urlAndMethods = new URLAndMethods(uri.substring(0, lastIndexOfDot), URLAndMethods.method(reqMethod));
             controllerAndMethod = urlMappingMap.get(urlAndMethods);
             if (controllerAndMethod == null) {
-                urlAndMethods = new URLAndMethods(uri.substring(0, lastIndexOfDot), URLAndMethods.EMPTY_METHODS);
+                urlAndMethods = new URLAndMethods(uri.substring(0, lastIndexOfDot), URLAndMethods.EMPTY_HTTP_METHODS);
                 controllerAndMethod = urlMappingMap.get(urlAndMethods);
             }
         }
-        if (controllerAndMethod != null) {
-            try {
+        try {
+            if (controllerAndMethod != null) {
                 dispatch(req, resp, controllerAndMethod);
-            } catch (Throwable e) {
-                if (e instanceof ServletException) {
-                    throw (ServletException) e;
-                }
-                if (e instanceof IOException) {
-                    throw (IOException) e;
-                }
-                throw new ServletException(e);
+            } else {
+                processNoMatch(req, resp);
             }
-            return;
+        } catch (Throwable e) {
+            if (e instanceof ServletException) {
+                throw (ServletException) e;
+            }
+            if (e instanceof IOException) {
+                throw (IOException) e;
+            }
+            throw new ServletException(e);
         }
-        processNoMatch(req, resp);
     }
 
     /**
@@ -131,23 +123,18 @@ public class DispatcherServlet extends HttpServlet {
             if (LOGGER.isDebugEnabled()) {
                 LOGGER.debug("parameter: {}", Arrays.deepToString(parameter));
             }
-            if (preHandle(req, resp, controller)) {
+            if (!preHandle(req, resp, controller)) {
                 return;
             }
             Object ret = method.invoke(controller, parameter);
             postHandle(req, resp, controller, ret);
+
             LOGGER.debug("invoke ret: {}", ret);
             processInvokeResult(ret, req, resp, controllerAndMethod);
         } catch (Throwable e) {
             exception = e;
         } finally {
-            try {
-                if (exception != null) {
-                    processException(exception, req, resp, controllerAndMethod);
-                }
-            } finally {
-                afterCompletion(req, resp, controller, exception);
-            }
+            afterCompletion(req, resp, controller, exception);
         }
     }
 
@@ -256,18 +243,6 @@ public class DispatcherServlet extends HttpServlet {
         return null;//todo 支持在方法列表上直接写 POJO
     }
 
-    /**
-     * 没有匹配到 Controller
-     */
-    protected void processNoMatch(HttpServletRequest req, HttpServletResponse resp)
-            throws ServletException, IOException {
-        resp.setContentType("text/plain;charset=UTF-8");
-        resp.setStatus(HttpServletResponse.SC_NOT_FOUND);
-        PrintWriter out = resp.getWriter();
-        out.println(req.getMethod() + " " + req.getRequestURI());
-        out.println("No matched Controller.");
-    }
-
     protected boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object controller) throws Exception {
         ArrayList<Interceptor> interceptors = getSortedInterceptors();
         String uri = request.getRequestURI();
@@ -296,7 +271,6 @@ public class DispatcherServlet extends HttpServlet {
         }
     }
 
-
     /**
      * 处理 Controller 方法返回值
      */
@@ -306,7 +280,7 @@ public class DispatcherServlet extends HttpServlet {
         ResponseBody responseBody = AnnotationUtil.getAnnotation(method, ResponseBody.class);
         if (responseBody != null) {
             Context context = getContext();
-            TreeSet<ResponseBodyHandler> responseBodyHandlers = new TreeSet<>(Ordered.ORDERED_COMPARATOR);
+            TreeSet<ResponseBodyHandler> responseBodyHandlers = new TreeSet<>(Ordered.DEFAULT_ORDERED_COMPARATOR);
             responseBodyHandlers.addAll(context.getBeans(ResponseBodyHandler.class));
             boolean processed = false;
             for (ResponseBodyHandler responseBodyHandler : responseBodyHandlers) {
@@ -355,29 +329,83 @@ public class DispatcherServlet extends HttpServlet {
     }
 
     /**
-     * 异常处理
+     * 没有匹配到 Controller
      */
-    protected void processException(Throwable e, HttpServletRequest req, HttpServletResponse resp,
-                                    ControllerAndMethod controllerAndMethod) throws Exception {
-        Context context = getContext();
-        TreeSet<ExceptionHandler> exceptionHandlers = new TreeSet<>(Ordered.ORDERED_COMPARATOR);
-        exceptionHandlers.addAll(context.getBeans(ExceptionHandler.class));
-        if (exceptionHandlers.isEmpty()) {
-            DEFAULT_EXCEPTION_HANDLER
-                    .handler(e, req, resp, controllerAndMethod.getController(), controllerAndMethod.getMethod());
-        }
-        for (ExceptionHandler exceptionHandler : exceptionHandlers) {
-            try {
-                exceptionHandler
-                        .handler(e, req, resp, controllerAndMethod.getController(), controllerAndMethod.getMethod());
-            } catch (Throwable e1) {
-                LOGGER.error("Exception handler throws a exception!", e1);
-            }
+    protected void processNoMatch(HttpServletRequest req, HttpServletResponse resp) throws Throwable {
+        String method = req.getMethod();
+        switch (method) {
+            case "HEAD":
+                processHead(req, resp);
+                break;
+            case "OPTIONS":
+                processOptions(req, resp);
+                break;
+            case "TRACE":
+                super.doTrace(req, resp);
+                break;
+            case "GET":
+            case "POST":
+            case "PUT":
+            case "PATCH":
+            case "DELETE":
+            default:
+                sendError405(req, resp);
         }
     }
 
-    public Context getContext() {
-        return (Context) super.getServletContext().getAttribute(ContextLoaderListener.CONTAINER);
+    private void processHead(HttpServletRequest req, HttpServletResponse resp) throws Throwable {
+        @SuppressWarnings("unchecked")
+        Map<URLAndMethods, ControllerAndMethod> urlMappingMap = getUrlMappingMap();
+        String requestURI = req.getRequestURI();
+        URLAndMethods urlAndMethods = new URLAndMethods(requestURI, URLAndMethods.HTTP_METHODS_GET);
+        ControllerAndMethod controllerAndMethod = urlMappingMap.get(urlAndMethods);
+        if (controllerAndMethod == null) {
+            sendError405(req, resp);
+        } else {
+            //all data write to response is only to count length but not send to client
+            NoBodyResponse response = new NoBodyResponse(resp);
+            dispatch(req, response, controllerAndMethod);//doGet
+            response.setContentLength();
+        }
+    }
+
+    private void processOptions(HttpServletRequest req, HttpServletResponse resp) throws Throwable {
+        @SuppressWarnings("unchecked")
+        String requestURI = req.getRequestURI();
+        StringBuilder allow = new StringBuilder();
+        for (HttpMethod httpMethod : HttpMethod.values()) {
+            if (supportHttpMethod(requestURI, httpMethod)) {
+                if (allow.length() > 0) {
+                    allow.append(", ");
+                }
+                allow.append(httpMethod.name());
+            }
+        }
+        resp.setHeader("Allow", allow.toString());
+    }
+
+    private boolean supportHttpMethod(String requestUri, HttpMethod method) {
+        switch (method) {
+            case HEAD:
+                return supportHttpMethod(requestUri, HttpMethod.GET);
+            case TRACE:
+            case OPTIONS:
+                return true;
+        }
+        Map<URLAndMethods, ControllerAndMethod> urlMappingMap = getUrlMappingMap();
+        URLAndMethods urlAndMethods = new URLAndMethods(requestUri, new HttpMethod[]{method});
+        return urlMappingMap.get(urlAndMethods) != null;
+    }
+
+    private void sendError405(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        String protocol = request.getProtocol();
+        String method = request.getMethod();
+        String msg = "Http method " + method + " is not supported by this URL";
+        if (protocol.endsWith("1.1")) {
+            response.sendError(HttpServletResponse.SC_METHOD_NOT_ALLOWED, msg);
+        } else {
+            response.sendError(HttpServletResponse.SC_BAD_REQUEST, msg);
+        }
     }
 
     public ArrayList<Interceptor> getSortedInterceptors() {
@@ -385,7 +413,7 @@ public class DispatcherServlet extends HttpServlet {
         if (interceptorList == null || interceptorSet.size() != interceptorList.size()) {
             interceptorList = new ArrayList<>();
             interceptorList.addAll(interceptorSet);
-            Collections.sort(interceptorList, Ordered.ORDERED_COMPARATOR);
+            Collections.sort(interceptorList, Ordered.DEFAULT_ORDERED_COMPARATOR);
         }
         return interceptorList;
     }

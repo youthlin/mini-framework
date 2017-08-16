@@ -4,6 +4,7 @@ import com.youthlin.ioc.annotaion.AnnotationUtil;
 import com.youthlin.ioc.annotaion.Controller;
 import com.youthlin.ioc.context.ClasspathContext;
 import com.youthlin.ioc.context.Context;
+import com.youthlin.mvc.annotation.HttpMethod;
 import com.youthlin.mvc.annotation.URL;
 import com.youthlin.mvc.mapping.ControllerAndMethod;
 import com.youthlin.mvc.mapping.URLAndMethods;
@@ -98,7 +99,7 @@ public class ContextLoaderListener implements ServletContextListener {
                         URL urlAnnotation = AnnotationUtil.getAnnotation(method, URL.class);
                         if (urlAnnotation != null) {
                             String url = (String) AnnotationUtil.getValue(method, urlAnnotation);
-                            com.youthlin.mvc.annotation.Method[] urlMethod = (com.youthlin.mvc.annotation.Method[])
+                            HttpMethod[] urlHttpMethod = (HttpMethod[])
                                     AnnotationUtil.getValue(method, urlAnnotation, "method");
                             urlPrefix = urlPrefix == null ? "" : urlPrefix;
                             if (!urlPrefix.startsWith(FORWARD)) {
@@ -111,10 +112,10 @@ public class ContextLoaderListener implements ServletContextListener {
                                 url = FORWARD + url;
                             }
                             url = urlPrefix + url;
-                            URLAndMethods urlAndMethods = new URLAndMethods(url, urlMethod);
+                            URLAndMethods urlAndMethods = new URLAndMethods(url, urlHttpMethod);
                             ControllerAndMethod controllerAndMethod = new ControllerAndMethod(bean, method);
                             urlMapping.put(urlAndMethods, controllerAndMethod);
-                            LOGGER.info("mapping url {} {} to method {}", url, Arrays.toString(urlMethod), method);
+                            LOGGER.info("mapping url {} {} to method {}", url, Arrays.toString(urlHttpMethod), method);
                         }
                     }
                 }
