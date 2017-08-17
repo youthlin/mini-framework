@@ -28,7 +28,7 @@ import java.util.concurrent.ConcurrentHashMap;
 @SuppressWarnings("WeakerAccess")
 public class ContextLoaderListener implements ServletContextListener {
     private static final Logger LOGGER = LoggerFactory.getLogger(ContextLoaderListener.class);
-    private static final String FORWARD = "/";
+    private static final String FORWARD_CHAR = "/";
     public static final String CONTAINER = "_MINI_IOC_CONTAINER";
     public static final String URL_MAPPING_MAP = "_URL_MAPPING_MAP";
     public static final String VIEW_PREFIX = "_VIEW_PREFIX";
@@ -90,6 +90,13 @@ public class ContextLoaderListener implements ServletContextListener {
                 if (controllerUrl != null) {
                     urlPrefix = (String) AnnotationUtil.getValue(beanClass, controllerUrl);
                 }
+                urlPrefix = urlPrefix == null ? "" : urlPrefix;
+                if (!urlPrefix.startsWith(FORWARD_CHAR)) {
+                    urlPrefix = FORWARD_CHAR + urlPrefix;
+                }
+                if (urlPrefix.endsWith(FORWARD_CHAR)) {
+                    urlPrefix = urlPrefix.substring(0, urlPrefix.length() - FORWARD_CHAR.length());
+                }
                 Method[] methods = beanClass.getMethods();
                 if (methods != null) {
                     for (Method method : methods) {
@@ -101,15 +108,8 @@ public class ContextLoaderListener implements ServletContextListener {
                             String url = (String) AnnotationUtil.getValue(method, urlAnnotation);
                             HttpMethod[] urlHttpMethod = (HttpMethod[])
                                     AnnotationUtil.getValue(method, urlAnnotation, "method");
-                            urlPrefix = urlPrefix == null ? "" : urlPrefix;
-                            if (!urlPrefix.startsWith(FORWARD)) {
-                                urlPrefix = FORWARD + urlPrefix;
-                            }
-                            if (urlPrefix.endsWith(FORWARD)) {
-                                urlPrefix = urlPrefix.substring(0, urlPrefix.length() - FORWARD.length());
-                            }
-                            if (!url.startsWith(FORWARD)) {
-                                url = FORWARD + url;
+                            if (!url.startsWith(FORWARD_CHAR)) {
+                                url = FORWARD_CHAR + url;
                             }
                             url = urlPrefix + url;
                             URLAndMethods urlAndMethods = new URLAndMethods(url, urlHttpMethod);
