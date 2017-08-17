@@ -1,4 +1,4 @@
-package com.youthlin.mvc.mapping;
+package com.youthlin.mvc.listener;
 
 import java.lang.reflect.Method;
 
@@ -10,7 +10,8 @@ public class ControllerAndMethod {
     private Object controller;
     private Method method;
 
-    public ControllerAndMethod(Object controller, Method method) {
+    //package private
+    ControllerAndMethod(Object controller, Method method) {
         this.controller = controller;
         this.method = method;
     }

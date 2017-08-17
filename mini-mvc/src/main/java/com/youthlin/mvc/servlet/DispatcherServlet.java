@@ -6,8 +6,8 @@ import com.youthlin.mvc.annotation.HttpMethod;
 import com.youthlin.mvc.annotation.Param;
 import com.youthlin.mvc.annotation.ResponseBody;
 import com.youthlin.mvc.listener.ContextLoaderListener;
-import com.youthlin.mvc.mapping.ControllerAndMethod;
-import com.youthlin.mvc.mapping.URLAndMethods;
+import com.youthlin.mvc.listener.ControllerAndMethod;
+import com.youthlin.mvc.listener.URLAndMethods;
 import com.youthlin.mvc.support.Interceptor;
 import com.youthlin.mvc.support.Ordered;
 import com.youthlin.mvc.support.ResponseBodyHandler;
@@ -30,7 +30,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
-
 
 /**
  * 路由类，将各个请求分发至具体的 Controller 上的方法
@@ -119,10 +118,13 @@ public class DispatcherServlet extends HttpServlet {
         }
     }
 
+    // ---------------------------------------------------------------------------------
+
     /**
      * 将请求打到 Controller 方法上
      */
-    private void dispatch(HttpServletRequest req, HttpServletResponse resp, ControllerAndMethod controllerAndMethod) throws Throwable {
+    private void dispatch(HttpServletRequest req, HttpServletResponse resp, ControllerAndMethod controllerAndMethod)
+            throws Throwable {
         Object controller = controllerAndMethod.getController();
         Method method = controllerAndMethod.getMethod();
         Throwable exception = null;
@@ -251,7 +253,10 @@ public class DispatcherServlet extends HttpServlet {
         return null;//todo 支持在方法列表上直接写 POJO
     }
 
-    protected boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object controller) throws Exception {
+    // ---------------------------------------------------------------------------------
+
+    protected boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object controller)
+            throws Exception {
         ArrayList<Interceptor> interceptors = getSortedInterceptors();
         String uri = request.getRequestURI();
         int size = interceptors.size();
@@ -269,7 +274,8 @@ public class DispatcherServlet extends HttpServlet {
         return true;
     }
 
-    protected void postHandle(HttpServletRequest request, HttpServletResponse response, Object controller, Object result) throws Exception {
+    protected void postHandle(HttpServletRequest request, HttpServletResponse response, Object controller,
+            Object result) throws Exception {
         ArrayList<Interceptor> interceptors = getSortedInterceptors();
         String uri = request.getRequestURI();
         for (Interceptor interceptor : interceptors) {
@@ -283,7 +289,7 @@ public class DispatcherServlet extends HttpServlet {
      * 处理 Controller 方法返回值
      */
     protected void processInvokeResult(Object result, HttpServletRequest req, HttpServletResponse resp,
-                                       ControllerAndMethod controllerAndMethod) throws IOException, ServletException {
+            ControllerAndMethod controllerAndMethod) throws IOException, ServletException {
         Method method = controllerAndMethod.getMethod();
         ResponseBody responseBody = AnnotationUtil.getAnnotation(method, ResponseBody.class);
         if (responseBody != null) {
@@ -295,6 +301,7 @@ public class DispatcherServlet extends HttpServlet {
                 if (responseBodyHandler.accept(method)) {
                     processed = true;
                     responseBodyHandler.handler(req, resp, result);
+                    break;
                 }
             }
             if (!processed) {
@@ -320,8 +327,8 @@ public class DispatcherServlet extends HttpServlet {
         }
     }
 
-
-    protected void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object controller, Throwable e) {
+    protected void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object controller,
+            Throwable e) {
         List<Interceptor> sortedInterceptors = getSortedInterceptors();
         String uri = request.getRequestURI();
         for (int i = interceptorIndex; i >= 0; i--) {
@@ -336,28 +343,40 @@ public class DispatcherServlet extends HttpServlet {
         }
     }
 
+    public ArrayList<Interceptor> getSortedInterceptors() {
+        Set<Interceptor> interceptorSet = getContext().getBeans(Interceptor.class);
+        if (interceptorList == null || interceptorSet.size() != interceptorList.size()) {
+            interceptorList = new ArrayList<>();
+            interceptorList.addAll(interceptorSet);
+            Collections.sort(interceptorList, Ordered.DEFAULT_ORDERED_COMPARATOR);
+        }
+        return interceptorList;
+    }
+
+    // ---------------------------------------------------------------------------------
+
     /**
      * 没有匹配到 Controller
      */
     protected void processNoMatch(HttpServletRequest req, HttpServletResponse resp) throws Throwable {
         String method = req.getMethod();
         switch (method) {
-            case "HEAD":
-                processHead(req, resp);
-                break;
-            case "OPTIONS":
-                processOptions(req, resp);
-                break;
-            case "TRACE":
-                super.doTrace(req, resp);
-                break;
-            case "GET":
-            case "POST":
-            case "PUT":
-            case "PATCH":
-            case "DELETE":
-            default:
-                sendError405(req, resp);
+        case "HEAD":
+            processHead(req, resp);
+            break;
+        case "OPTIONS":
+            processOptions(req, resp);
+            break;
+        case "TRACE":
+            super.doTrace(req, resp);
+            break;
+        case "GET":
+        case "POST":
+        case "PUT":
+        case "PATCH":
+        case "DELETE":
+        default:
+            sendError405(req, resp);
         }
     }
 
@@ -378,7 +397,6 @@ public class DispatcherServlet extends HttpServlet {
     }
 
     private void processOptions(HttpServletRequest req, HttpServletResponse resp) throws Throwable {
-        @SuppressWarnings("unchecked")
         String requestURI = req.getRequestURI();
         StringBuilder allow = new StringBuilder();
         for (HttpMethod httpMethod : HttpMethod.values()) {
@@ -394,14 +412,14 @@ public class DispatcherServlet extends HttpServlet {
 
     private boolean supportHttpMethod(String requestUri, HttpMethod method) {
         switch (method) {
-            case HEAD:
-                return supportHttpMethod(requestUri, HttpMethod.GET);
-            case TRACE:
-            case OPTIONS:
-                return true;
+        case HEAD:
+            return supportHttpMethod(requestUri, HttpMethod.GET);
+        case TRACE:
+        case OPTIONS:
+            return true;
         }
         Map<URLAndMethods, ControllerAndMethod> urlMappingMap = getUrlMappingMap();
-        URLAndMethods urlAndMethods = new URLAndMethods(requestUri, new HttpMethod[]{method});
+        URLAndMethods urlAndMethods = new URLAndMethods(requestUri, new HttpMethod[] { method });
         return urlMappingMap.get(urlAndMethods) != null;
     }
 
@@ -414,16 +432,6 @@ public class DispatcherServlet extends HttpServlet {
         } else {
             response.sendError(HttpServletResponse.SC_BAD_REQUEST, msg);
         }
-    }
-
-    public ArrayList<Interceptor> getSortedInterceptors() {
-        Set<Interceptor> interceptorSet = getContext().getBeans(Interceptor.class);
-        if (interceptorList == null || interceptorSet.size() != interceptorList.size()) {
-            interceptorList = new ArrayList<>();
-            interceptorList.addAll(interceptorSet);
-            Collections.sort(interceptorList, Ordered.DEFAULT_ORDERED_COMPARATOR);
-        }
-        return interceptorList;
     }
 
 }

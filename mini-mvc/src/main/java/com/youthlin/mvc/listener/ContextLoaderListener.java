@@ -6,8 +6,6 @@ import com.youthlin.ioc.context.ClasspathContext;
 import com.youthlin.ioc.context.Context;
 import com.youthlin.mvc.annotation.HttpMethod;
 import com.youthlin.mvc.annotation.URL;
-import com.youthlin.mvc.mapping.ControllerAndMethod;
-import com.youthlin.mvc.mapping.URLAndMethods;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

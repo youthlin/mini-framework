@@ -1,4 +1,4 @@
-package com.youthlin.mvc.mapping;
+package com.youthlin.mvc.listener;
 
 import com.youthlin.mvc.annotation.HttpMethod;
 
