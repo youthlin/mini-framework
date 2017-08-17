@@ -15,12 +15,16 @@ public interface Interceptor extends Ordered {
     boolean accept(String uri);
 
     /**
-     * 是否继续其他
+     * 是否继续
      */
     boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object controller) throws Exception;
 
     void postHandle(HttpServletRequest request, HttpServletResponse response, Object controller, Object result) throws Exception;
 
-    void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object controller, Throwable e) throws Throwable;
+    /**
+     * @return null means the exception has been processed,
+     * or you should return a exception to propagate it.
+     */
+    Throwable afterCompletion(HttpServletRequest request, HttpServletResponse response, Object controller, Throwable e) throws Throwable;
 
 }

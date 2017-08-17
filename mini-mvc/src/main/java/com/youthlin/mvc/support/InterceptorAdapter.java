@@ -23,7 +23,8 @@ public class InterceptorAdapter implements Interceptor {
     }
 
     @Override
-    public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object controller, Throwable e) throws Throwable {
+    public Throwable afterCompletion(HttpServletRequest request, HttpServletResponse response, Object controller, Throwable e) throws Throwable {
+        return e;
     }
 
     @Override

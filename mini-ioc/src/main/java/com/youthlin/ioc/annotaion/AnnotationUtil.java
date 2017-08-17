@@ -39,7 +39,8 @@ public class AnnotationUtil {
     private static final String DOT = ".";
     private static final String VALUE = "value";
     private static final FileFilter FILE_FILTER = new FileFilter() {
-        @Override public boolean accept(File pathname) {
+        @Override
+        public boolean accept(File pathname) {
             if (pathname.isDirectory()) {
                 return true;
             }
@@ -82,14 +83,14 @@ public class AnnotationUtil {
         LOGGER.debug("scan url = {}", url);
         String protocol = url.getProtocol();
         switch (protocol) {
-        case "file":
-            classNames.addAll(getClassNamesFromFileSystem(basePackage, url));
-            break;
-        case "jar":
-            classNames.addAll(getClassNamesFromJar(basePackage, url));
-            break;
-        default:
-            LOGGER.warn("unknown protocol. [{}]", protocol);
+            case "file":
+                classNames.addAll(getClassNamesFromFileSystem(basePackage, url));
+                break;
+            case "jar":
+                classNames.addAll(getClassNamesFromJar(basePackage, url));
+                break;
+            default:
+                LOGGER.warn("unknown protocol. [{}]", protocol);
         }
         return classNames;
     }
@@ -147,7 +148,7 @@ public class AnnotationUtil {
                 JarEntry jarEntry = entries.nextElement();
                 String name = jarEntry.getName();
                 if (name.endsWith(DOT_CLASS) && !name.contains(DOLLAR) && name.startsWith(basePackage)) {
-                    name = name.replace(FILE_SEPARATOR, DOT);
+                    name = name.replace("/", DOT);//jar 内都是 /
                     name = name.substring(0, name.lastIndexOf(DOT_CLASS));
                     classNames.add(name);
                 }

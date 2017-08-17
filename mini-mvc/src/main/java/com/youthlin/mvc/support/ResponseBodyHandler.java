@@ -29,7 +29,6 @@ public interface ResponseBodyHandler extends Ordered {
     /**
      * 处理 Controller 方法的返回值
      */
-    void handler(HttpServletRequest request, HttpServletResponse response, Object result)
-            throws ServletException, IOException;
+    void handler(HttpServletRequest request, HttpServletResponse response, Object result) throws Exception;
 
 }

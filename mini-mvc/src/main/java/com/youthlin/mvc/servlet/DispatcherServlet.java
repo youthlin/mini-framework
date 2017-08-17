@@ -103,8 +103,7 @@ public class DispatcherServlet extends HttpServlet {
     /**
      * 将请求打到 Controller 方法上
      */
-    private void dispatch(HttpServletRequest req, HttpServletResponse resp, ControllerAndMethod controllerAndMethod)
-            throws Throwable {
+    private void dispatch(HttpServletRequest req, HttpServletResponse resp, ControllerAndMethod controllerAndMethod) throws Throwable {
         HttpRequestWithModelMap request = new HttpRequestWithModelMap(req);
         Object controller = controllerAndMethod.getController();
         Method method = controllerAndMethod.getMethod();
@@ -123,9 +122,12 @@ public class DispatcherServlet extends HttpServlet {
             LOGGER.debug("invoke ret: {}", ret);
             processInvokeResult(request, resp, model, ret, controllerAndMethod);
         } catch (Throwable e) {
-            exception = e;
+            exception = e;// throw
         } finally {
-            afterCompletion(request, resp, controller, exception);
+            exception = afterCompletion(request, resp, controller, exception);
+        }
+        if (exception != null) {
+            throw exception;
         }
     }
 
@@ -277,8 +279,8 @@ public class DispatcherServlet extends HttpServlet {
         boolean rendered = false;
         for (View view : sortedView) {
             try {
-                if (!view.render(req, resp, model, result, controllerAndMethod)) {
-                    rendered = true;
+                rendered = view.render(req, resp, model, result, controllerAndMethod);
+                if (rendered) {
                     break;
                 }
             } catch (Exception e) {
@@ -290,20 +292,21 @@ public class DispatcherServlet extends HttpServlet {
         }
     }
 
-    protected void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object controller,
-                                   Throwable e) {
+    protected Throwable afterCompletion(HttpServletRequest request, HttpServletResponse response, Object controller,
+                                        Throwable e) {
         List<Interceptor> sortedInterceptors = getSortedInterceptors();
         String uri = request.getRequestURI();
         for (int i = interceptorIndex; i >= 0; i--) {
             Interceptor interceptor = sortedInterceptors.get(i);
             if (interceptor.accept(uri)) {
                 try {
-                    interceptor.afterCompletion(request, response, controller, e);
+                    e = interceptor.afterCompletion(request, response, controller, e);
                 } catch (Throwable t) {
                     LOGGER.error("HandlerInterceptor.afterCompletion threw exception", t);
                 }
             }
         }
+        return e;
     }
 
     public ArrayList<Interceptor> getSortedInterceptors() {
