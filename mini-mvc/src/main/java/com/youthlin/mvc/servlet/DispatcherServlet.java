@@ -1,16 +1,14 @@
 package com.youthlin.mvc.servlet;
 
-import com.youthlin.ioc.annotaion.AnnotationUtil;
 import com.youthlin.ioc.context.Context;
 import com.youthlin.mvc.annotation.HttpMethod;
 import com.youthlin.mvc.annotation.Param;
-import com.youthlin.mvc.annotation.ResponseBody;
-import com.youthlin.mvc.listener.ContextLoaderListener;
 import com.youthlin.mvc.listener.ControllerAndMethod;
 import com.youthlin.mvc.listener.URLAndMethods;
+import com.youthlin.mvc.support.DefaultView;
 import com.youthlin.mvc.support.Interceptor;
 import com.youthlin.mvc.support.Ordered;
-import com.youthlin.mvc.support.ResponseBodyHandler;
+import com.youthlin.mvc.support.View;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -39,41 +37,23 @@ import java.util.TreeSet;
 @SuppressWarnings("WeakerAccess")
 public class DispatcherServlet extends HttpServlet {
     private static final Logger LOGGER = LoggerFactory.getLogger(DispatcherServlet.class);
-    public static final String REDIRECT = "redirect:";
-    public static final String FORWARD = "forward:";
     private ArrayList<Interceptor> interceptorList;
     private int interceptorIndex = -1;
-    /**
-     * 默认 ResponseBody 处理器, 直接将返回值 toString 输出
-     */
-    private static final ResponseBodyHandler DEFAULT_RESPONSE_BODY_HANDLER = new ResponseBodyHandler() {
-        @Override
-        public boolean accept(Method controllerMethod) {
-            return true;
-        }
-
-        @Override
-        public void handler(HttpServletRequest request, HttpServletResponse response, Object result)
-                throws ServletException, IOException {
-            if (result != null) {
-                response.getWriter().println(result.toString());
-            }
-        }
-
-        @Override
-        public int getOrder() {
-            return 0;
-        }
-    };
+    // 默认视图
+    private static final View DEFAULT_VIEW = new DefaultView();
 
     public Context getContext() {
-        return (Context) super.getServletContext().getAttribute(ContextLoaderListener.CONTAINER);
+        return (Context) super.getServletContext().getAttribute(Constants.CONTAINER);
+    }
+
+    public static Context getContext(HttpServletRequest request) {
+        return (Context) request.getServletContext().getAttribute(Constants.CONTAINER);
     }
 
     @SuppressWarnings("unchecked")
     public Map<URLAndMethods, ControllerAndMethod> getUrlMappingMap() {
         return (Map<URLAndMethods, ControllerAndMethod>)
-                super.getServletContext().getAttribute(ContextLoaderListener.URL_MAPPING_MAP);
+                super.getServletContext().getAttribute(Constants.URL_MAPPING_MAP);
     }
 
     /**
@@ -125,26 +105,27 @@ public class DispatcherServlet extends HttpServlet {
      */
     private void dispatch(HttpServletRequest req, HttpServletResponse resp, ControllerAndMethod controllerAndMethod)
             throws Throwable {
+        HttpRequestWithModelMap request = new HttpRequestWithModelMap(req);
         Object controller = controllerAndMethod.getController();
         Method method = controllerAndMethod.getMethod();
         Throwable exception = null;
         try {
-            Object[] parameter = injectParameter(req, resp, method);
+            Object[] parameter = injectParameter(request, resp, method);
             if (LOGGER.isDebugEnabled()) {
                 LOGGER.debug("parameter: {}", Arrays.deepToString(parameter));
             }
-            if (!preHandle(req, resp, controller)) {
+            if (!preHandle(request, resp, controller)) {
                 return;
             }
             Object ret = method.invoke(controller, parameter);
-            postHandle(req, resp, controller, ret);
-
+            postHandle(request, resp, controller, ret);
+            Map<String, Object> model = request.getMap();
             LOGGER.debug("invoke ret: {}", ret);
-            processInvokeResult(ret, req, resp, controllerAndMethod);
+            processInvokeResult(request, resp, model, ret, controllerAndMethod);
         } catch (Throwable e) {
             exception = e;
         } finally {
-            afterCompletion(req, resp, controller, exception);
+            afterCompletion(request, resp, controller, exception);
         }
     }
 
@@ -162,7 +143,7 @@ public class DispatcherServlet extends HttpServlet {
             } else if (parameterType.isAssignableFrom(HttpServletResponse.class)) {
                 parameter[i] = resp;
             } else if (parameterType.isAssignableFrom(Map.class)) {
-                HashMap<String, Object> map = new HashMap<>();
+                HashMap<String, Object> map = new ModelWithRequest(req);
                 parameter[i] = map;
                 Enumeration<String> parameterNames = req.getParameterNames();
                 while (parameterNames.hasMoreElements()) {
@@ -275,7 +256,7 @@ public class DispatcherServlet extends HttpServlet {
     }
 
     protected void postHandle(HttpServletRequest request, HttpServletResponse response, Object controller,
-            Object result) throws Exception {
+                              Object result) throws Exception {
         ArrayList<Interceptor> interceptors = getSortedInterceptors();
         String uri = request.getRequestURI();
         for (Interceptor interceptor : interceptors) {
@@ -288,47 +269,29 @@ public class DispatcherServlet extends HttpServlet {
     /**
      * 处理 Controller 方法返回值
      */
-    protected void processInvokeResult(Object result, HttpServletRequest req, HttpServletResponse resp,
-            ControllerAndMethod controllerAndMethod) throws IOException, ServletException {
-        Method method = controllerAndMethod.getMethod();
-        ResponseBody responseBody = AnnotationUtil.getAnnotation(method, ResponseBody.class);
-        if (responseBody != null) {
-            Context context = getContext();
-            TreeSet<ResponseBodyHandler> responseBodyHandlers = new TreeSet<>(Ordered.DEFAULT_ORDERED_COMPARATOR);
-            responseBodyHandlers.addAll(context.getBeans(ResponseBodyHandler.class));
-            boolean processed = false;
-            for (ResponseBodyHandler responseBodyHandler : responseBodyHandlers) {
-                if (responseBodyHandler.accept(method)) {
-                    processed = true;
-                    responseBodyHandler.handler(req, resp, result);
+    protected void processInvokeResult(HttpServletRequest req, HttpServletResponse resp,
+                                       Map<String, Object> model, Object result,
+                                       ControllerAndMethod controllerAndMethod) throws Exception {
+        TreeSet<View> sortedView = new TreeSet<>(Ordered.DEFAULT_ORDERED_COMPARATOR);
+        sortedView.addAll(getContext().getBeans(View.class));
+        boolean rendered = false;
+        for (View view : sortedView) {
+            try {
+                if (!view.render(req, resp, model, result, controllerAndMethod)) {
+                    rendered = true;
                     break;
                 }
+            } catch (Exception e) {
+                LOGGER.error("error when render view! view: {}", view, e);
             }
-            if (!processed) {
-                DEFAULT_RESPONSE_BODY_HANDLER.handler(req, resp, result);
-            }
-        } else {
-            //返回字符串：页面
-            if (result instanceof String) {
-                if (((String) result).startsWith(REDIRECT)) {
-                    resp.sendRedirect(((String) result).substring(REDIRECT.length()));
-                    return;
-                } else if (((String) result).startsWith(FORWARD)) {
-                    req.getRequestDispatcher(((String) result).substring(FORWARD.length())).forward(req, resp);
-                    return;
-                }
-                String prefix = (String) super.getServletContext().getAttribute(ContextLoaderListener.VIEW_PREFIX);
-                String suffix = (String) super.getServletContext().getAttribute(ContextLoaderListener.VIEW_SUFFIX);
-                req.getRequestDispatcher(prefix + result + suffix).forward(req, resp);
-            } else {
-                throw new RuntimeException(
-                        "You can only return String value when there is no @ResponseBody on method.");
-            }
+        }
+        if (!rendered) {
+            DEFAULT_VIEW.render(req, resp, model, result, controllerAndMethod);
         }
     }
 
     protected void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object controller,
-            Throwable e) {
+                                   Throwable e) {
         List<Interceptor> sortedInterceptors = getSortedInterceptors();
         String uri = request.getRequestURI();
         for (int i = interceptorIndex; i >= 0; i--) {
@@ -361,22 +324,22 @@ public class DispatcherServlet extends HttpServlet {
     protected void processNoMatch(HttpServletRequest req, HttpServletResponse resp) throws Throwable {
         String method = req.getMethod();
         switch (method) {
-        case "HEAD":
-            processHead(req, resp);
-            break;
-        case "OPTIONS":
-            processOptions(req, resp);
-            break;
-        case "TRACE":
-            super.doTrace(req, resp);
-            break;
-        case "GET":
-        case "POST":
-        case "PUT":
-        case "PATCH":
-        case "DELETE":
-        default:
-            sendError405(req, resp);
+            case "HEAD":
+                processHead(req, resp);
+                break;
+            case "OPTIONS":
+                processOptions(req, resp);
+                break;
+            case "TRACE":
+                super.doTrace(req, resp);
+                break;
+            case "GET":
+            case "POST":
+            case "PUT":
+            case "PATCH":
+            case "DELETE":
+            default:
+                sendError405(req, resp);
         }
     }
 
@@ -412,14 +375,14 @@ public class DispatcherServlet extends HttpServlet {
 
     private boolean supportHttpMethod(String requestUri, HttpMethod method) {
         switch (method) {
-        case HEAD:
-            return supportHttpMethod(requestUri, HttpMethod.GET);
-        case TRACE:
-        case OPTIONS:
-            return true;
+            case HEAD:
+                return supportHttpMethod(requestUri, HttpMethod.GET);
+            case TRACE:
+            case OPTIONS:
+                return true;
         }
         Map<URLAndMethods, ControllerAndMethod> urlMappingMap = getUrlMappingMap();
-        URLAndMethods urlAndMethods = new URLAndMethods(requestUri, new HttpMethod[] { method });
+        URLAndMethods urlAndMethods = new URLAndMethods(requestUri, new HttpMethod[]{method});
         return urlMappingMap.get(urlAndMethods) != null;
     }
 

@@ -6,6 +6,7 @@ import com.youthlin.ioc.context.ClasspathContext;
 import com.youthlin.ioc.context.Context;
 import com.youthlin.mvc.annotation.HttpMethod;
 import com.youthlin.mvc.annotation.URL;
+import com.youthlin.mvc.servlet.Constants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -26,13 +27,6 @@ import java.util.concurrent.ConcurrentHashMap;
 @SuppressWarnings("WeakerAccess")
 public class ContextLoaderListener implements ServletContextListener {
     private static final Logger LOGGER = LoggerFactory.getLogger(ContextLoaderListener.class);
-    private static final String FORWARD_CHAR = "/";
-    public static final String CONTAINER = "_MINI_IOC_CONTAINER";
-    public static final String URL_MAPPING_MAP = "_URL_MAPPING_MAP";
-    public static final String VIEW_PREFIX = "_VIEW_PREFIX";
-    public static final String VIEW_PREFIX_PARAM_NAME = "view-prefix";
-    public static final String VIEW_SUFFIX = "_VIEW_SUFFIX";
-    public static final String VIEW_SUFFIX_PARAM_NAME = "view-suffix";
     private Context container;
     private Map<URLAndMethods, ControllerAndMethod> urlMapping = new ConcurrentHashMap<>();
 
@@ -54,16 +48,16 @@ public class ContextLoaderListener implements ServletContextListener {
     private void init(ServletContextEvent sce) {
         ServletContext servletContext = sce.getServletContext();
         LOGGER.debug("servlet context = {}, source = {}", servletContext, sce.getSource());
-        servletContext.setAttribute(VIEW_PREFIX, "");
-        servletContext.setAttribute(VIEW_SUFFIX, "");
+        servletContext.setAttribute(Constants.VIEW_PREFIX, "");
+        servletContext.setAttribute(Constants.VIEW_SUFFIX, "");
         Enumeration<String> initParameterNames = servletContext.getInitParameterNames();
         while (initParameterNames.hasMoreElements()) {
             String parameterName = initParameterNames.nextElement();
             String initParameterValue = servletContext.getInitParameter(parameterName);
-            if (parameterName.equals(VIEW_PREFIX_PARAM_NAME)) {
-                servletContext.setAttribute(VIEW_PREFIX, initParameterValue);
-            } else if (parameterName.equals(VIEW_SUFFIX_PARAM_NAME)) {
-                servletContext.setAttribute(VIEW_SUFFIX, initParameterValue);
+            if (parameterName.equals(Constants.VIEW_PREFIX_PARAM_NAME)) {
+                servletContext.setAttribute(Constants.VIEW_PREFIX, initParameterValue);
+            } else if (parameterName.equals(Constants.VIEW_SUFFIX_PARAM_NAME)) {
+                servletContext.setAttribute(Constants.VIEW_SUFFIX, initParameterValue);
             }
             LOGGER.debug("name = {}, value = {}", parameterName, initParameterValue);
         }
@@ -74,7 +68,7 @@ public class ContextLoaderListener implements ServletContextListener {
         }
         container = new ClasspathContext(scanPackages);
         LOGGER.debug("register {} beans.", container.getBeanCount());
-        servletContext.setAttribute(CONTAINER, container);
+        servletContext.setAttribute(Constants.CONTAINER, container);
     }
 
     //映射 URL 到 Controller 方法
@@ -89,11 +83,11 @@ public class ContextLoaderListener implements ServletContextListener {
                     urlPrefix = (String) AnnotationUtil.getValue(beanClass, controllerUrl);
                 }
                 urlPrefix = urlPrefix == null ? "" : urlPrefix;
-                if (!urlPrefix.startsWith(FORWARD_CHAR)) {
-                    urlPrefix = FORWARD_CHAR + urlPrefix;
+                if (!urlPrefix.startsWith(Constants.FORWARD_CHAR)) {
+                    urlPrefix = Constants.FORWARD_CHAR + urlPrefix;
                 }
-                if (urlPrefix.endsWith(FORWARD_CHAR)) {
-                    urlPrefix = urlPrefix.substring(0, urlPrefix.length() - FORWARD_CHAR.length());
+                if (urlPrefix.endsWith(Constants.FORWARD_CHAR)) {
+                    urlPrefix = urlPrefix.substring(0, urlPrefix.length() - Constants.FORWARD_CHAR.length());
                 }
                 Method[] methods = beanClass.getMethods();
                 if (methods != null) {
@@ -106,8 +100,8 @@ public class ContextLoaderListener implements ServletContextListener {
                             String url = (String) AnnotationUtil.getValue(method, urlAnnotation);
                             HttpMethod[] urlHttpMethod = (HttpMethod[])
                                     AnnotationUtil.getValue(method, urlAnnotation, "method");
-                            if (!url.startsWith(FORWARD_CHAR)) {
-                                url = FORWARD_CHAR + url;
+                            if (!url.startsWith(Constants.FORWARD_CHAR)) {
+                                url = Constants.FORWARD_CHAR + url;
                             }
                             url = urlPrefix + url;
                             URLAndMethods urlAndMethods = new URLAndMethods(url, urlHttpMethod);
@@ -119,7 +113,7 @@ public class ContextLoaderListener implements ServletContextListener {
                 }
             }
         }
-        sce.getServletContext().setAttribute(URL_MAPPING_MAP, urlMapping);
+        sce.getServletContext().setAttribute(Constants.URL_MAPPING_MAP, urlMapping);
     }
 
     @Override
