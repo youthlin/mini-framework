@@ -5,10 +5,12 @@ import com.youthlin.ioc.annotaion.IAnnotationProcessor;
 import com.youthlin.ioc.annotaion.SimpleAnnotationProcessor;
 import com.youthlin.ioc.exception.BeanDefinitionException;
 import com.youthlin.ioc.exception.NoSuchBeanException;
+import com.youthlin.ioc.spi.IPreScanner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -35,21 +37,25 @@ public abstract class AbstractContext implements Context {
         LOGGER.debug("class map:{}", getClazzBeanMap());
     }
 
-    public AbstractContext(PreScanner preScanner) {
-        this(preScanner, "");
+    public AbstractContext(List<IPreScanner> preScannerList) {
+        this(preScannerList, "");
     }
 
-    public AbstractContext(PreScanner preScanner, String... scanPackages) {
-        preScanner.preScan(this);
+    public AbstractContext(List<IPreScanner> preScannerList, String... scanPackages) {
+        for (IPreScanner preScanner : preScannerList) {
+            preScanner.preScan(this);
+        }
         processor.autoScan(this, scanPackages);
     }
 
-    @Override public void registerBean(Object bean) {
+    @Override
+    public void registerBean(Object bean) {
         String name = bean.getClass().getSimpleName();
         registerBean(bean, name);
     }
 
-    @Override public void registerBean(Object bean, String name) {
+    @Override
+    public void registerBean(Object bean, String name) {
         Class<?> beanClass = bean.getClass();
         Object existBean = nameBeanMap.get(name);
         if (existBean != null) {
@@ -65,12 +71,14 @@ public abstract class AbstractContext implements Context {
         clazzBeanMap.put(beanClass, bean);
     }
 
-    @Override public Object getBean(String name) {
+    @Override
+    public Object getBean(String name) {
         return getNameBeanMap().get(name);
     }
 
     @SuppressWarnings("unchecked")
-    @Override public <T> T getBean(Class<T> clazz) {
+    @Override
+    public <T> T getBean(Class<T> clazz) {
         try {
             return AnnotationUtil.getBean(getClazzBeanMap(), clazz);
         } catch (NoSuchBeanException e) {
@@ -79,18 +87,21 @@ public abstract class AbstractContext implements Context {
     }
 
     @SuppressWarnings("unchecked")
-    @Override public <T> T getBean(String name, Class<T> clazz) {
+    @Override
+    public <T> T getBean(String name, Class<T> clazz) {
         Object o = getNameBeanMap().get(name);
         return (T) o;
     }
 
-    @Override public <T> Set<T> getBeans(Class<T> clazz) {
+    @Override
+    public <T> Set<T> getBeans(Class<T> clazz) {
         Set<T> set = new HashSet<>();
         set.addAll(AnnotationUtil.getBeans(getClazzBeanMap(), clazz));
         return set;
     }
 
-    @Override public Object[] getBeans(Class<?>[] classes) {
+    @Override
+    public Object[] getBeans(Class<?>[] classes) {
         Object[] beans = new Object[classes.length];
         for (int i = 0; i < classes.length; i++) {
             beans[i] = getBean(classes[i]);
@@ -98,11 +109,13 @@ public abstract class AbstractContext implements Context {
         return beans;
     }
 
-    @Override public int getBeanCount() {
+    @Override
+    public int getBeanCount() {
         return getClazzBeanMap().size();
     }
 
-    @Override public Set<Object> getBeans() {
+    @Override
+    public Set<Object> getBeans() {
         Set<Object> set = new HashSet<>();
         for (Map.Entry<Class, Object> entry : getClazzBeanMap().entrySet()) {
             set.add(entry.getValue());
@@ -110,15 +123,18 @@ public abstract class AbstractContext implements Context {
         return set;
     }
 
-    @Override public Map<String, Object> getNameBeanMap() {
+    @Override
+    public Map<String, Object> getNameBeanMap() {
         return nameBeanMap;
     }
 
-    @Override public Map<Class, Object> getClazzBeanMap() {
+    @Override
+    public Map<Class, Object> getClazzBeanMap() {
         return clazzBeanMap;
     }
 
-    @Override public Set<String> getUnloadedClass() {
+    @Override
+    public Set<String> getUnloadedClass() {
         return unloadedClassName;
     }
 

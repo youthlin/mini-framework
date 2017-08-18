@@ -4,11 +4,10 @@ import com.youthlin.ioc.annotaion.AnnotationUtil;
 import com.youthlin.ioc.annotaion.Controller;
 import com.youthlin.ioc.context.ClasspathContext;
 import com.youthlin.ioc.context.Context;
-import com.youthlin.ioc.context.PreScanner;
+import com.youthlin.ioc.spi.IPreScanner;
 import com.youthlin.mvc.annotation.HttpMethod;
 import com.youthlin.mvc.annotation.URL;
 import com.youthlin.mvc.servlet.Constants;
-import com.youthlin.mvc.support.mybatis.MapperScanner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -18,9 +17,12 @@ import javax.servlet.ServletContextEvent;
 import javax.servlet.ServletContextListener;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Enumeration;
+import java.util.List;
 import java.util.Map;
+import java.util.ServiceLoader;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListSet;
@@ -68,16 +70,12 @@ public class ContextLoaderListener implements ServletContextListener {
         if (scan != null) {
             scanPackages = scan.split("\\s|,|;");
         }
-        container = new ClasspathContext(new PreScanner() {
-            @Override public void preScan(Context context) {
-                try {
-                    MapperScanner mapperScanner = new MapperScanner();
-                    mapperScanner.scan(context);
-                } catch (Throwable e) {
-                    LOGGER.debug("", e);
-                }
-            }
-        }, scanPackages);
+        ServiceLoader<IPreScanner> preScanners = ServiceLoader.load(IPreScanner.class);
+        List<IPreScanner> preScannerList = new ArrayList<>();
+        for (IPreScanner preScanner : preScanners) {
+            preScannerList.add(preScanner);
+        }
+        container = new ClasspathContext(preScannerList, scanPackages);
         LOGGER.info("register {} beans.", container.getBeanCount());
         servletContext.setAttribute(Constants.CONTAINER, container);
     }
@@ -133,6 +131,9 @@ public class ContextLoaderListener implements ServletContextListener {
     @Override
     public void contextDestroyed(ServletContextEvent sce) {
         System.out.println(sce);
+        if (container == null) {
+            return;
+        }
         for (Object bean : container.getBeans()) {
             for (Method method : bean.getClass().getDeclaredMethods()) {
                 PreDestroy preDestroy = AnnotationUtil.getAnnotation(method, PreDestroy.class);
