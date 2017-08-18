@@ -26,7 +26,6 @@ import java.util.Set;
 @SuppressWarnings("WeakerAccess")
 public class SimpleAnnotationProcessor implements IAnnotationProcessor {
     private static final Logger LOGGER = LoggerFactory.getLogger(SimpleAnnotationProcessor.class);
-    protected Set<String> classNames = new HashSet<>();
 
     /**
      * 对包路径进行自动扫描
@@ -34,6 +33,7 @@ public class SimpleAnnotationProcessor implements IAnnotationProcessor {
     @SuppressWarnings("unchecked")
     @Override
     public void autoScan(Context context, String... scanPackages) {
+        Set<String> classNames = new HashSet<>();
         classNames.addAll(AnnotationUtil.getClassNames(scanPackages));
         LOGGER.trace("class names in scan package: {}", classNames);
         // 构造 Bean

@@ -89,6 +89,7 @@ public class ContextLoaderListener implements ServletContextListener {
                 if (urlPrefix.endsWith(Constants.FORWARD_CHAR)) {
                     urlPrefix = urlPrefix.substring(0, urlPrefix.length() - Constants.FORWARD_CHAR.length());
                 }
+                urlPrefix = sce.getServletContext().getContextPath() + urlPrefix;
                 Method[] methods = beanClass.getMethods();
                 if (methods != null) {
                     for (Method method : methods) {

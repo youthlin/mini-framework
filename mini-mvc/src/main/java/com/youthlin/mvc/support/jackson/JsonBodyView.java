@@ -19,8 +19,8 @@ public class JsonBodyView implements View {
     private static final ResponseBodyHandler jsonBodyHandler = new JsonBodyHandler();
 
     @Override
-    public boolean render(HttpServletRequest request, HttpServletResponse response, Map<String, ?> model, Object result,
-            ControllerAndMethod controllerAndMethod) throws Exception {
+    public boolean render(HttpServletRequest request, HttpServletResponse response,
+            Map<String, Object> model, Object result, ControllerAndMethod controllerAndMethod) throws Exception {
         if (AnnotationUtil.getAnnotation(controllerAndMethod.getMethod(), JsonBody.class) == null) {
             return false;
         }

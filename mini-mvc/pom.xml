@@ -13,6 +13,7 @@
 
     <properties>
         <jackson.version>2.9.0</jackson.version>
+        <thymeleaf.version>3.0.7.RELEASE</thymeleaf.version>
     </properties>
 
     <dependencyManagement>
@@ -26,6 +27,11 @@
                 <groupId>com.fasterxml.jackson.core</groupId>
                 <artifactId>jackson-databind</artifactId>
                 <version>${jackson.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.thymeleaf</groupId>
+                <artifactId>thymeleaf</artifactId>
+                <version>${thymeleaf.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
@@ -50,6 +56,12 @@
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.thymeleaf</groupId>
+            <artifactId>thymeleaf</artifactId>
             <scope>provided</scope>
         </dependency>
     </dependencies>

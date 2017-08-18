@@ -27,7 +27,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.TreeSet;
 
 /**
  * 路由类，将各个请求分发至具体的 Controller 上的方法
@@ -278,17 +277,13 @@ public class DispatcherServlet extends HttpServlet {
     protected void processInvokeResult(HttpServletRequest req, HttpServletResponse resp,
             Map<String, Object> model, Object result,
             ControllerAndMethod controllerAndMethod) throws Exception {
-        TreeSet<View> sortedView = new TreeSet<>(Ordered.DEFAULT_ORDERED_COMPARATOR);
-        sortedView.addAll(getContext().getBeans(View.class));
+        List<View> sortedViewList = new ArrayList<>(getContext().getBeans(View.class));
+        Collections.sort(sortedViewList, Ordered.DEFAULT_ORDERED_COMPARATOR);
         boolean rendered = false;
-        for (View view : sortedView) {
-            try {
-                rendered = view.render(req, resp, model, result, controllerAndMethod);
-                if (rendered) {
-                    break;
-                }
-            } catch (Exception e) {
-                LOGGER.error("error when render view! view: {}", view, e);
+        for (View view : sortedViewList) {
+            rendered = view.render(req, resp, model, result, controllerAndMethod);
+            if (rendered) {
+                break;
             }
         }
         if (!rendered) {

@@ -10,8 +10,10 @@ import com.youthlin.mvc.servlet.DispatcherServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
-import java.util.TreeSet;
 
 /**
  * 创建：youthlin.chen
@@ -21,16 +23,17 @@ public class DefaultView implements View {
     private static final ResponseBodyHandler DEFAULT_RESPONSE_BODY_HANDLER = new DefaultResponseBodyHandler();
 
     @Override
-    public boolean render(HttpServletRequest req, HttpServletResponse resp, Map<String, ?> model, Object result,
-            ControllerAndMethod controllerAndMethod) throws Exception {
+    public boolean render(HttpServletRequest req, HttpServletResponse resp,
+            Map<String, Object> model, Object result, ControllerAndMethod controllerAndMethod) throws Exception {
         Method method = controllerAndMethod.getMethod();
         ResponseBody responseBody = AnnotationUtil.getAnnotation(method, ResponseBody.class);
         if (responseBody != null) {
             Context context = DispatcherServlet.getContext(req);
-            TreeSet<ResponseBodyHandler> responseBodyHandlers = new TreeSet<>(Ordered.DEFAULT_ORDERED_COMPARATOR);
-            responseBodyHandlers.addAll(context.getBeans(ResponseBodyHandler.class));
+            List<ResponseBodyHandler> responseBodyHandlerList =
+                    new ArrayList<>(context.getBeans(ResponseBodyHandler.class));
+            Collections.sort(responseBodyHandlerList, Ordered.DEFAULT_ORDERED_COMPARATOR);
             boolean processed = false;
-            for (ResponseBodyHandler responseBodyHandler : responseBodyHandlers) {
+            for (ResponseBodyHandler responseBodyHandler : responseBodyHandlerList) {
                 if (responseBodyHandler.accept(method)) {
                     processed = true;
                     responseBodyHandler.handler(req, resp, result);
