@@ -50,7 +50,7 @@ public class ContextLoaderListener implements ServletContextListener {
 
     //初始化容器
     private void init(ServletContextEvent sce) {
-        ServletContext servletContext = sce.getServletContext();
+        final ServletContext servletContext = sce.getServletContext();
         LOGGER.debug("servlet context = {}, source = {}", servletContext, sce.getSource());
         servletContext.setAttribute(Constants.VIEW_PREFIX, "");
         servletContext.setAttribute(Constants.VIEW_SUFFIX, "");
@@ -66,12 +66,18 @@ public class ContextLoaderListener implements ServletContextListener {
             LOGGER.info("find initParameter: name = {}, value = {}", parameterName, initParameterValue);
         }
         String scan = servletContext.getInitParameter("scan");
-        String[] scanPackages = { "" };
+        String[] scanPackages = {""};
         if (scan != null) {
             scanPackages = scan.split("\\s|,|;");
         }
         ServiceLoader<IPreScanner> preScanners = ServiceLoader.load(IPreScanner.class);
         List<IPreScanner> preScannerList = new ArrayList<>();
+        preScannerList.add(new IPreScanner() {
+            @Override
+            public void preScan(Context context) {
+                context.registerBean(servletContext);
+            }
+        });
         for (IPreScanner preScanner : preScanners) {
             preScannerList.add(preScanner);
         }

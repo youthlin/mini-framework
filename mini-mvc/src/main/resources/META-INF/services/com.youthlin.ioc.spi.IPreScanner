@@ -1,1 +1,1 @@
-com.youthlin.mvc.listener.PreScanner
+com.youthlin.mvc.support.mybatis.PreScannerForMyBatis

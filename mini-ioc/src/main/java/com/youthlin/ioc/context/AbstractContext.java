@@ -43,7 +43,11 @@ public abstract class AbstractContext implements Context {
 
     public AbstractContext(List<IPreScanner> preScannerList, String... scanPackages) {
         for (IPreScanner preScanner : preScannerList) {
-            preScanner.preScan(this);
+            try {
+                preScanner.preScan(this);
+            } catch (Exception e) {
+                LOGGER.error("PreScanner Error {}", preScanner, e);//不能影响主流程
+            }
         }
         processor.autoScan(this, scanPackages);
     }
