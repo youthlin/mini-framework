@@ -104,6 +104,8 @@ public class MapperScanner {
                 Reader sqlFileReader = Resources.getResourceAsReader(initSqlFile);
                 try (SqlSession sqlSession = factory.openSession();
                      Connection connection = sqlSession.getConnection()) {
+                    // java 执行 sql 脚本的 3 种方式 (ant,ibatis,ScriptRunner)
+                    // http://mxm910821.iteye.com/blog/1701822
                     ScriptRunner scriptRunner = new ScriptRunner(connection);
                     scriptRunner.runScript(sqlFileReader);
                     connection.commit();
