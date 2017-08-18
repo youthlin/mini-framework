@@ -13,4 +13,12 @@ public class ClasspathContext extends AbstractContext {
         super(scanPackages);
     }
 
+    public ClasspathContext(PreScanner preScanner) {
+        this(preScanner, "");
+    }
+
+    public ClasspathContext(PreScanner preScanner, String... scanPackages) {
+        super(preScanner, scanPackages);
+    }
+
 }

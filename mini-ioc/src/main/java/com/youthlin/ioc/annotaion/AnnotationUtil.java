@@ -52,7 +52,7 @@ public class AnnotationUtil {
     /**
      * 获取包路径之下的所有类名 不包括内部类和非 .class 结尾的类
      */
-    static Set<String> getClassNames(String... basePackages) {
+    public static Set<String> getClassNames(String... basePackages) {
         Set<String> classNames = new HashSet<>();
         if (basePackages != null) {
             for (String basePackage : basePackages) {
@@ -83,14 +83,14 @@ public class AnnotationUtil {
         LOGGER.debug("scan url = {}", url);
         String protocol = url.getProtocol();
         switch (protocol) {
-            case "file":
-                classNames.addAll(getClassNamesFromFileSystem(basePackage, url));
-                break;
-            case "jar":
-                classNames.addAll(getClassNamesFromJar(basePackage, url));
-                break;
-            default:
-                LOGGER.warn("unknown protocol. [{}]", protocol);
+        case "file":
+            classNames.addAll(getClassNamesFromFileSystem(basePackage, url));
+            break;
+        case "jar":
+            classNames.addAll(getClassNamesFromJar(basePackage, url));
+            break;
+        default:
+            LOGGER.warn("unknown protocol. [{}]", protocol);
         }
         return classNames;
     }

@@ -40,16 +40,19 @@ public class SimpleAnnotationProcessor implements IAnnotationProcessor {
         for (String className : classNames) {
             registerClass(context, className);
         }
+        afterRegister(context);
         // 注入需要的字段
         for (Map.Entry<Class, Object> entry : context.getClazzBeanMap().entrySet()) {
             Object obj = entry.getValue();
             injectFiled(context, obj);
             injectMethod(context, obj);
         }
+        afterInjected(context);
         // PostConstruct
         for (Object bean : context.getBeans()) {
             postConstruct(context, bean);
         }
+        done(context);
     }
 
     /**
@@ -63,7 +66,7 @@ public class SimpleAnnotationProcessor implements IAnnotationProcessor {
      *                                 3. 有重复名称的 Bean 存在时;
      *                                 4. 有重复类型的 Bean 存在时
      */
-    private void registerClass(Context context, String className) {
+    protected void registerClass(Context context, String className) {
         try {
             //会触发类的 static 块，但不会触发构造函数和实例初始化块
             Class<?> aClass = Class.forName(className);
@@ -96,6 +99,10 @@ public class SimpleAnnotationProcessor implements IAnnotationProcessor {
         return !Modifier.isInterface(modifiers) && !Modifier.isAbstract(modifiers) && Modifier.isPublic(modifiers);
     }
 
+    protected void afterRegister(Context context) {
+
+    }
+
     /**
      * 注入该 Bean 中需要的字段.
      * 字段上定义了名称时，只按名称查找；没定义名称时，按类型查找
@@ -113,7 +120,7 @@ public class SimpleAnnotationProcessor implements IAnnotationProcessor {
      *                             当不能注入 Bean 到字段中时
      */
     @SuppressWarnings("unchecked")
-    private void injectFiled(Context context, Object object) {
+    protected void injectFiled(Context context, Object object) {
         Class<?> objClass = object.getClass();
         Field[] fields = objClass.getDeclaredFields();
         if (fields != null) {
@@ -146,7 +153,7 @@ public class SimpleAnnotationProcessor implements IAnnotationProcessor {
     }
 
     @SuppressWarnings("unchecked")
-    private Object getFiledValueByType(Context context, Field field, Object object) {
+    protected Object getFiledValueByType(Context context, Field field, Object object) {
         Class<?> type = field.getType();
         Object filedValue = null;
         try {
@@ -186,11 +193,15 @@ public class SimpleAnnotationProcessor implements IAnnotationProcessor {
     }
 
     //支持通过 setter 方法注入
-    private void injectMethod(Context context, Object object) {
+    protected void injectMethod(Context context, Object object) {
         //todo 请你实现
     }
 
-    private void postConstruct(Context context, Object bean) {
+    protected void afterInjected(Context context) {
+
+    }
+
+    protected void postConstruct(Context context, Object bean) {
         Method[] methods = bean.getClass().getDeclaredMethods();
         if (methods != null) {
             for (Method method : methods) {
@@ -208,5 +219,9 @@ public class SimpleAnnotationProcessor implements IAnnotationProcessor {
                 }
             }
         }
+    }
+
+    protected void done(Context context) {
+
     }
 }

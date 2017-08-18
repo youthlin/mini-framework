@@ -35,6 +35,15 @@ public abstract class AbstractContext implements Context {
         LOGGER.debug("class map:{}", getClazzBeanMap());
     }
 
+    public AbstractContext(PreScanner preScanner) {
+        this(preScanner, "");
+    }
+
+    public AbstractContext(PreScanner preScanner, String... scanPackages) {
+        preScanner.preScan(this);
+        processor.autoScan(this, scanPackages);
+    }
+
     @Override public void registerBean(Object bean) {
         String name = bean.getClass().getSimpleName();
         registerBean(bean, name);

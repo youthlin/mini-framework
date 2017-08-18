@@ -4,9 +4,11 @@ import com.youthlin.ioc.annotaion.AnnotationUtil;
 import com.youthlin.ioc.annotaion.Controller;
 import com.youthlin.ioc.context.ClasspathContext;
 import com.youthlin.ioc.context.Context;
+import com.youthlin.ioc.context.PreScanner;
 import com.youthlin.mvc.annotation.HttpMethod;
 import com.youthlin.mvc.annotation.URL;
 import com.youthlin.mvc.servlet.Constants;
+import com.youthlin.mvc.support.mybatis.MapperScanner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -66,7 +68,16 @@ public class ContextLoaderListener implements ServletContextListener {
         if (scan != null) {
             scanPackages = scan.split("\\s|,|;");
         }
-        container = new ClasspathContext(scanPackages);
+        container = new ClasspathContext(new PreScanner() {
+            @Override public void preScan(Context context) {
+                try {
+                    MapperScanner mapperScanner = new MapperScanner();
+                    mapperScanner.scan(context);
+                } catch (Throwable e) {
+                    LOGGER.debug("", e);
+                }
+            }
+        }, scanPackages);
         LOGGER.info("register {} beans.", container.getBeanCount());
         servletContext.setAttribute(Constants.CONTAINER, container);
     }
