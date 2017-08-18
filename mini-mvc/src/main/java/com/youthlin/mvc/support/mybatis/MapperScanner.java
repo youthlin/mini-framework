@@ -1,7 +1,6 @@
 package com.youthlin.mvc.support.mybatis;
 
 import com.youthlin.ioc.annotaion.AnnotationUtil;
-import com.youthlin.ioc.annotaion.Dao;
 import com.youthlin.ioc.context.Context;
 import org.apache.ibatis.exceptions.PersistenceException;
 import org.apache.ibatis.io.Resources;
@@ -39,7 +38,7 @@ public class MapperScanner {
     static final String INIT_SQL = "mybatis-init-sql";
     static final String INIT_FILE = "mybatis-init-file";
     private Context context;
-    private String scanAnnotation = Dao.class.getName();
+    private String scanAnnotation = Mapper.class.getName();
     private String[] scanPackages = {""};
     private String configFile = "mybatis/config.xml";
     private String initSql;
