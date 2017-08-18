@@ -85,6 +85,11 @@ public class MapperScanner {
         initSqlFile();
     }
 
+    private void registerMapper(Object mapper) {
+        context.registerBean(mapper);
+        mappers.put(mapper.getClass(), mapper);
+    }
+
     private void initSql() {
         if (initSql != null && !initSql.isEmpty()) {
             try (SqlSession sqlSession = factory.openSession();
@@ -116,12 +121,6 @@ public class MapperScanner {
                 throw new IllegalArgumentException(e);
             }
         }
-    }
-
-
-    private void registerMapper(Object mapper) {
-        context.registerBean(mapper);
-        mappers.put(mapper.getClass(), mapper);
     }
 
     //region getter and setter
