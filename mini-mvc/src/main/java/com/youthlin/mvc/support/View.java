@@ -15,5 +15,5 @@ public interface View extends Ordered {
      * @return true if has complete and success render the view. return false to try next view
      */
     boolean render(HttpServletRequest request, HttpServletResponse response, Map<String, ?> model, Object result,
-                   ControllerAndMethod controllerAndMethod) throws Exception;
+            ControllerAndMethod controllerAndMethod) throws Exception;
 }

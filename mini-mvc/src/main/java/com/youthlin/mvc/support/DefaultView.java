@@ -22,7 +22,7 @@ public class DefaultView implements View {
 
     @Override
     public boolean render(HttpServletRequest req, HttpServletResponse resp, Map<String, ?> model, Object result,
-                          ControllerAndMethod controllerAndMethod) throws Exception {
+            ControllerAndMethod controllerAndMethod) throws Exception {
         Method method = controllerAndMethod.getMethod();
         ResponseBody responseBody = AnnotationUtil.getAnnotation(method, ResponseBody.class);
         if (responseBody != null) {
@@ -45,14 +45,14 @@ public class DefaultView implements View {
             if (result instanceof String) {
                 if (((String) result).startsWith(Constants.REDIRECT)) {
                     resp.sendRedirect(((String) result).substring(Constants.REDIRECT.length()));
-                    return true;
                 } else if (((String) result).startsWith(Constants.FORWARD)) {
-                    req.getRequestDispatcher(((String) result).substring(Constants.FORWARD.length())).forward(req, resp);
-                    return true;
+                    req.getRequestDispatcher(((String) result).substring(Constants.FORWARD.length()))
+                            .forward(req, resp);
+                } else {
+                    String prefix = (String) req.getServletContext().getAttribute(Constants.VIEW_PREFIX);
+                    String suffix = (String) req.getServletContext().getAttribute(Constants.VIEW_SUFFIX);
+                    req.getRequestDispatcher(prefix + result + suffix).forward(req, resp);
                 }
-                String prefix = (String) req.getServletContext().getAttribute(Constants.VIEW_PREFIX);
-                String suffix = (String) req.getServletContext().getAttribute(Constants.VIEW_SUFFIX);
-                req.getRequestDispatcher(prefix + result + suffix).forward(req, resp);
             } else {
                 throw new RuntimeException(
                         "You can only return String value when there is no @ResponseBody on method.");

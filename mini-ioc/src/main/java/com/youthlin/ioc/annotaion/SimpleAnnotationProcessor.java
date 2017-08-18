@@ -7,8 +7,10 @@ import com.youthlin.ioc.exception.NoSuchBeanException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.Arrays;
 import java.util.Collection;
@@ -34,14 +36,19 @@ public class SimpleAnnotationProcessor implements IAnnotationProcessor {
     public void autoScan(Context context, String... scanPackages) {
         classNames.addAll(AnnotationUtil.getClassNames(scanPackages));
         LOGGER.trace("class names in scan package: {}", classNames);
+        // 构造 Bean
         for (String className : classNames) {
             registerClass(context, className);
         }
-        //注入需要的字段
+        // 注入需要的字段
         for (Map.Entry<Class, Object> entry : context.getClazzBeanMap().entrySet()) {
             Object obj = entry.getValue();
             injectFiled(context, obj);
             injectMethod(context, obj);
+        }
+        // PostConstruct
+        for (Object bean : context.getBeans()) {
+            postConstruct(context, bean);
         }
     }
 
@@ -71,7 +78,7 @@ public class SimpleAnnotationProcessor implements IAnnotationProcessor {
                 if (shouldNewInstance(aClass)) {
                     Object o = aClass.newInstance();
                     context.registerBean(o, name);
-                    LOGGER.info("find bean: {}, name: {}, annotations: {}",
+                    LOGGER.debug("find bean: {}, name: {}, annotations: {}",
                             o.getClass(), name, Arrays.toString(aClass.getAnnotations()));
                 }
             }
@@ -127,7 +134,7 @@ public class SimpleAnnotationProcessor implements IAnnotationProcessor {
                     try {
                         field.setAccessible(true);
                         field.set(object, filedValue);
-                        LOGGER.info("inject field [ {} ] with value [ {} ] to [ {} ]", field, filedValue, object);
+                        LOGGER.debug("inject field [ {} ] with value [ {} ] to [ {} ]", field, filedValue, object);
                     } catch (IllegalAccessException e) {
                         LOGGER.warn("Can not access field {}, class: {}", field, objClass, e);
                         throw new BeanInjectException("Can not inject field " + field + " to class " + objClass, e);
@@ -183,4 +190,31 @@ public class SimpleAnnotationProcessor implements IAnnotationProcessor {
         //todo 请你实现
     }
 
+    private Object[] getBeans(Context context, Class[] clazz) {
+        Object[] beans = new Object[clazz.length];
+        for (int i = 0; i < clazz.length; i++) {
+            beans[i] = context.getBean(clazz[i]);
+        }
+        return beans;
+    }
+
+    private void postConstruct(Context context, Object bean) {
+        Method[] methods = bean.getClass().getDeclaredMethods();
+        if (methods != null) {
+            for (Method method : methods) {
+                PostConstruct postConstruct = AnnotationUtil.getAnnotation(method, PostConstruct.class);
+                if (postConstruct != null) {
+                    Class<?>[] parameterTypes = method.getParameterTypes();
+                    Object[] parameters = getBeans(context, parameterTypes);
+                    try {
+                        method.setAccessible(true);
+                        method.invoke(bean, parameters);
+                    } catch (ReflectiveOperationException e) {
+                        LOGGER.error("Error occurs when invoke PostConstruct method {} of bean {}", method, bean);
+                    }
+                    break;//bean should have more than one PostConstruct
+                }
+            }
+        }
+    }
 }

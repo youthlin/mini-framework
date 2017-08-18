@@ -12,7 +12,6 @@
     <modules>
         <module>mini-ioc</module>
         <module>mini-mvc</module>
-        <module>mini-mvc-jackson</module>
     </modules>
 
     <properties>

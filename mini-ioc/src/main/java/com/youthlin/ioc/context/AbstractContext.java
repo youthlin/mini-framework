@@ -31,8 +31,8 @@ public abstract class AbstractContext implements Context {
 
     public AbstractContext(String... scanPackages) {
         processor.autoScan(this, scanPackages);
-        LOGGER.info("name  map:{}", getNameBeanMap());
-        LOGGER.info("class map:{}", getClazzBeanMap());
+        LOGGER.debug("name  map:{}", getNameBeanMap());
+        LOGGER.debug("class map:{}", getClazzBeanMap());
     }
 
     @Override public void registerBean(Object bean) {

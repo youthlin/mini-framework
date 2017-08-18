@@ -1,21 +1,17 @@
-package com.youthlin.mvc.json;
+package com.youthlin.mvc.support.jackson;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.youthlin.ioc.annotaion.AnnotationUtil;
 import com.youthlin.mvc.support.ResponseBodyHandler;
 
-import javax.annotation.Resource;
-import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import java.io.IOException;
 import java.lang.reflect.Method;
 
 /**
  * 创建： youthlin.chen
- * 时间： 2017-08-14 17:04.
+ * 时间： 2017-08-18 10:48.
  */
-@Resource
 public class JsonBodyHandler implements ResponseBodyHandler {
     private static final ObjectMapper objectMapper = new ObjectMapper();
 

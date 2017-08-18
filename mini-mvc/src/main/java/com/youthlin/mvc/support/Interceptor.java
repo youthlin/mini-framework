@@ -19,12 +19,15 @@ public interface Interceptor extends Ordered {
      */
     boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object controller) throws Exception;
 
-    void postHandle(HttpServletRequest request, HttpServletResponse response, Object controller, Object result) throws Exception;
+    void postHandle(HttpServletRequest request, HttpServletResponse response, Object controller, Object result)
+            throws Exception;
 
     /**
      * @return null means the exception has been processed,
      * or you should return a exception to propagate it.
+     * @throws Throwable will be logged but not propagate
      */
-    Throwable afterCompletion(HttpServletRequest request, HttpServletResponse response, Object controller, Throwable e) throws Throwable;
+    Throwable afterCompletion(HttpServletRequest request, HttpServletResponse response, Object controller, Throwable e)
+            throws Throwable;
 
 }

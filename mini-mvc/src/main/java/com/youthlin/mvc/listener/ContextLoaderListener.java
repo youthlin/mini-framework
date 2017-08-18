@@ -59,7 +59,7 @@ public class ContextLoaderListener implements ServletContextListener {
             } else if (parameterName.equals(Constants.VIEW_SUFFIX_PARAM_NAME)) {
                 servletContext.setAttribute(Constants.VIEW_SUFFIX, initParameterValue);
             }
-            LOGGER.debug("name = {}, value = {}", parameterName, initParameterValue);
+            LOGGER.info("find initParameter: name = {}, value = {}", parameterName, initParameterValue);
         }
         String scan = servletContext.getInitParameter("scan");
         String[] scanPackages = { "" };
@@ -67,7 +67,7 @@ public class ContextLoaderListener implements ServletContextListener {
             scanPackages = scan.split("\\s|,|;");
         }
         container = new ClasspathContext(scanPackages);
-        LOGGER.debug("register {} beans.", container.getBeanCount());
+        LOGGER.info("register {} beans.", container.getBeanCount());
         servletContext.setAttribute(Constants.CONTAINER, container);
     }
 

@@ -1,7 +1,8 @@
-package com.youthlin.mvc.json;
+package com.youthlin.mvc.support.jackson;
 
 import com.youthlin.ioc.annotaion.AnnotationUtil;
 import com.youthlin.mvc.listener.ControllerAndMethod;
+import com.youthlin.mvc.support.ResponseBodyHandler;
 import com.youthlin.mvc.support.View;
 
 import javax.annotation.Resource;
@@ -15,11 +16,11 @@ import java.util.Map;
  */
 @Resource
 public class JsonBodyView implements View {
-    @Resource
-    private JsonBodyHandler jsonBodyHandler;
+    private static final ResponseBodyHandler jsonBodyHandler = new JsonBodyHandler();
 
     @Override
-    public boolean render(HttpServletRequest request, HttpServletResponse response, Map<String, ?> model, Object result, ControllerAndMethod controllerAndMethod) throws Exception {
+    public boolean render(HttpServletRequest request, HttpServletResponse response, Map<String, ?> model, Object result,
+            ControllerAndMethod controllerAndMethod) throws Exception {
         if (AnnotationUtil.getAnnotation(controllerAndMethod.getMethod(), JsonBody.class) == null) {
             return false;
         }

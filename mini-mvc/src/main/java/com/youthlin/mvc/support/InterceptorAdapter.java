@@ -14,16 +14,19 @@ public class InterceptorAdapter implements Interceptor {
     }
 
     @Override
-    public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object controller) throws Exception {
+    public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object controller)
+            throws Exception {
         return true;
     }
 
     @Override
-    public void postHandle(HttpServletRequest request, HttpServletResponse response, Object controller, Object result) throws Exception {
+    public void postHandle(HttpServletRequest request, HttpServletResponse response, Object controller, Object result)
+            throws Exception {
     }
 
     @Override
-    public Throwable afterCompletion(HttpServletRequest request, HttpServletResponse response, Object controller, Throwable e) throws Throwable {
+    public Throwable afterCompletion(HttpServletRequest request, HttpServletResponse response, Object controller,
+            Throwable e) throws Throwable {
         return e;
     }
 

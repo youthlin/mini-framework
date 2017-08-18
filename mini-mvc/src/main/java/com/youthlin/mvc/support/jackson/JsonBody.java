@@ -1,4 +1,4 @@
-package com.youthlin.mvc.json;
+package com.youthlin.mvc.support.jackson;
 
 import com.youthlin.mvc.annotation.ResponseBody;
 
