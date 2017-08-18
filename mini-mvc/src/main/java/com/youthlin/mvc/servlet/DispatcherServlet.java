@@ -1,5 +1,6 @@
 package com.youthlin.mvc.servlet;
 
+import com.youthlin.ioc.annotaion.AnnotationUtil;
 import com.youthlin.ioc.context.Context;
 import com.youthlin.mvc.annotation.HttpMethod;
 import com.youthlin.mvc.annotation.Param;
@@ -12,6 +13,7 @@ import com.youthlin.mvc.support.View;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.annotation.PreDestroy;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
@@ -52,8 +54,12 @@ public class DispatcherServlet extends HttpServlet {
 
     @SuppressWarnings("unchecked")
     public Map<URLAndMethods, ControllerAndMethod> getUrlMappingMap() {
-        return (Map<URLAndMethods, ControllerAndMethod>)
-                super.getServletContext().getAttribute(Constants.URL_MAPPING_MAP);
+        return (Map<URLAndMethods, ControllerAndMethod>) getServletContext().getAttribute(Constants.URL_MAPPING_MAP);
+    }
+
+    @SuppressWarnings("unchecked")
+    public Set<String> getMappedUrlSet() {
+        return (Set<String>) getServletContext().getAttribute(Constants.MAPPED_URL_SET);
     }
 
     /**
@@ -64,7 +70,6 @@ public class DispatcherServlet extends HttpServlet {
         String reqMethod = req.getMethod();
         String uri = req.getRequestURI();
         LOGGER.debug("uri = {}, method = {}", uri, reqMethod);
-        @SuppressWarnings("unchecked")
         Map<URLAndMethods, ControllerAndMethod> urlMappingMap = getUrlMappingMap();
         URLAndMethods urlAndMethods = new URLAndMethods(uri, URLAndMethods.method(reqMethod));
         ControllerAndMethod controllerAndMethod = urlMappingMap.get(urlAndMethods);
@@ -72,7 +77,7 @@ public class DispatcherServlet extends HttpServlet {
             urlAndMethods = new URLAndMethods(uri, URLAndMethods.EMPTY_HTTP_METHODS);
             controllerAndMethod = urlMappingMap.get(urlAndMethods);
         }
-        int lastIndexOfDot = uri.lastIndexOf(".");
+        int lastIndexOfDot = uri.lastIndexOf(Constants.DOT);
         if (controllerAndMethod == null && lastIndexOfDot > 0) {// url:/get/some.html -> /get/some
             urlAndMethods = new URLAndMethods(uri.substring(0, lastIndexOfDot), URLAndMethods.method(reqMethod));
             controllerAndMethod = urlMappingMap.get(urlAndMethods);
@@ -103,7 +108,8 @@ public class DispatcherServlet extends HttpServlet {
     /**
      * 将请求打到 Controller 方法上
      */
-    private void dispatch(HttpServletRequest req, HttpServletResponse resp, ControllerAndMethod controllerAndMethod) throws Throwable {
+    private void dispatch(HttpServletRequest req, HttpServletResponse resp, ControllerAndMethod controllerAndMethod)
+            throws Throwable {
         HttpRequestWithModelMap request = new HttpRequestWithModelMap(req);
         Object controller = controllerAndMethod.getController();
         Method method = controllerAndMethod.getMethod();
@@ -258,7 +264,7 @@ public class DispatcherServlet extends HttpServlet {
     }
 
     protected void postHandle(HttpServletRequest request, HttpServletResponse response, Object controller,
-                              Object result) throws Exception {
+            Object result) throws Exception {
         ArrayList<Interceptor> interceptors = getSortedInterceptors();
         String uri = request.getRequestURI();
         for (Interceptor interceptor : interceptors) {
@@ -272,8 +278,8 @@ public class DispatcherServlet extends HttpServlet {
      * 处理 Controller 方法返回值
      */
     protected void processInvokeResult(HttpServletRequest req, HttpServletResponse resp,
-                                       Map<String, Object> model, Object result,
-                                       ControllerAndMethod controllerAndMethod) throws Exception {
+            Map<String, Object> model, Object result,
+            ControllerAndMethod controllerAndMethod) throws Exception {
         TreeSet<View> sortedView = new TreeSet<>(Ordered.DEFAULT_ORDERED_COMPARATOR);
         sortedView.addAll(getContext().getBeans(View.class));
         boolean rendered = false;
@@ -292,15 +298,14 @@ public class DispatcherServlet extends HttpServlet {
         }
     }
 
-    protected Throwable afterCompletion(HttpServletRequest request, HttpServletResponse response, Object controller,
-                                        Throwable e) {
+    protected Throwable afterCompletion(HttpServletRequest req, HttpServletResponse resp, Object handler, Throwable e) {
         List<Interceptor> sortedInterceptors = getSortedInterceptors();
-        String uri = request.getRequestURI();
+        String uri = req.getRequestURI();
         for (int i = interceptorIndex; i >= 0; i--) {
             Interceptor interceptor = sortedInterceptors.get(i);
             if (interceptor.accept(uri)) {
                 try {
-                    e = interceptor.afterCompletion(request, response, controller, e);
+                    e = interceptor.afterCompletion(req, resp, handler, e);
                 } catch (Throwable t) {
                     LOGGER.error("HandlerInterceptor.afterCompletion threw exception", t);
                 }
@@ -325,24 +330,38 @@ public class DispatcherServlet extends HttpServlet {
      * 没有匹配到 Controller
      */
     protected void processNoMatch(HttpServletRequest req, HttpServletResponse resp) throws Throwable {
+        Set<String> mappedUrls = (Set<String>) getServletContext().getAttribute(Constants.MAPPED_URL_SET);
+        String requestURI = req.getRequestURI();
+        boolean containsURI = mappedUrls.contains(requestURI);
+        if (!containsURI) {
+            int lastIndexOfDot = requestURI.lastIndexOf(Constants.DOT);
+            if (lastIndexOfDot > 0) {
+                requestURI = requestURI.substring(0, lastIndexOfDot);
+                containsURI = mappedUrls.contains(requestURI);
+            }
+        }
+        if (!containsURI) {
+            sendError404(req, resp);
+            return;
+        }
         String method = req.getMethod();
         switch (method) {
-            case "HEAD":
-                processHead(req, resp);
-                break;
-            case "OPTIONS":
-                processOptions(req, resp);
-                break;
-            case "TRACE":
-                super.doTrace(req, resp);
-                break;
-            case "GET":
-            case "POST":
-            case "PUT":
-            case "PATCH":
-            case "DELETE":
-            default:
-                sendError405(req, resp);
+        case "HEAD":
+            processHead(req, resp);
+            break;
+        case "OPTIONS":
+            processOptions(req, resp);
+            break;
+        case "TRACE":
+            super.doTrace(req, resp);
+            break;
+        case "GET":
+        case "POST":
+        case "PUT":
+        case "PATCH":
+        case "DELETE":
+        default:
+            sendError405(req, resp);
         }
     }
 
@@ -378,14 +397,14 @@ public class DispatcherServlet extends HttpServlet {
 
     private boolean supportHttpMethod(String requestUri, HttpMethod method) {
         switch (method) {
-            case HEAD:
-                return supportHttpMethod(requestUri, HttpMethod.GET);
-            case TRACE:
-            case OPTIONS:
-                return true;
+        case HEAD:
+            return supportHttpMethod(requestUri, HttpMethod.GET);
+        case TRACE:
+        case OPTIONS:
+            return true;
         }
         Map<URLAndMethods, ControllerAndMethod> urlMappingMap = getUrlMappingMap();
-        URLAndMethods urlAndMethods = new URLAndMethods(requestUri, new HttpMethod[]{method});
+        URLAndMethods urlAndMethods = new URLAndMethods(requestUri, new HttpMethod[] { method });
         return urlMappingMap.get(urlAndMethods) != null;
     }
 
@@ -398,6 +417,30 @@ public class DispatcherServlet extends HttpServlet {
         } else {
             response.sendError(HttpServletResponse.SC_BAD_REQUEST, msg);
         }
+    }
+
+    private void sendError404(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        response.sendError(HttpServletResponse.SC_NOT_FOUND);
+    }
+
+    @Override public void destroy() {
+        LOGGER.info("destroy");
+        for (Object bean : getContext().getBeans()) {
+            for (Method method : bean.getClass().getDeclaredMethods()) {
+                PreDestroy preDestroy = AnnotationUtil.getAnnotation(method, PreDestroy.class);
+                if (preDestroy != null) {
+                    Class<?>[] parameterTypes = method.getParameterTypes();
+                    Object[] parameters = getContext().getBeans(parameterTypes);
+                    try {
+                        method.invoke(bean, parameters);
+                    } catch (ReflectiveOperationException e) {
+                        LOGGER.error("Error occurs when invoke PreDestroy method {} of bean {}", method, bean);
+                    }
+                    break;
+                }
+            }
+        }
+        super.destroy();
     }
 
 }

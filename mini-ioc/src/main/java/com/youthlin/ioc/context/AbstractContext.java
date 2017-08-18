@@ -81,6 +81,14 @@ public abstract class AbstractContext implements Context {
         return set;
     }
 
+    @Override public Object[] getBeans(Class<?>[] classes) {
+        Object[] beans = new Object[classes.length];
+        for (int i = 0; i < classes.length; i++) {
+            beans[i] = getBean(classes[i]);
+        }
+        return beans;
+    }
+
     @Override public int getBeanCount() {
         return getClazzBeanMap().size();
     }

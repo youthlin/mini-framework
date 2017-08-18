@@ -18,7 +18,9 @@ import java.lang.reflect.Modifier;
 import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentSkipListSet;
 
 /**
  * 创建： youthlin.chen
@@ -29,10 +31,7 @@ public class ContextLoaderListener implements ServletContextListener {
     private static final Logger LOGGER = LoggerFactory.getLogger(ContextLoaderListener.class);
     private Context container;
     private Map<URLAndMethods, ControllerAndMethod> urlMapping = new ConcurrentHashMap<>();
-
-    public ContextLoaderListener() {
-        LOGGER.debug("构造 ContextLoaderListener");
-    }
+    private Set<String> mappedUrls = new ConcurrentSkipListSet<>();
 
     /**
      * 容器启动时自动执行
@@ -107,6 +106,7 @@ public class ContextLoaderListener implements ServletContextListener {
                             URLAndMethods urlAndMethods = new URLAndMethods(url, urlHttpMethod);
                             ControllerAndMethod controllerAndMethod = new ControllerAndMethod(bean, method);
                             urlMapping.put(urlAndMethods, controllerAndMethod);
+                            mappedUrls.add(url);
                             LOGGER.info("mapping url {} {} to method {}", url, Arrays.toString(urlHttpMethod), method);
                         }
                     }
@@ -114,6 +114,7 @@ public class ContextLoaderListener implements ServletContextListener {
             }
         }
         sce.getServletContext().setAttribute(Constants.URL_MAPPING_MAP, urlMapping);
+        sce.getServletContext().setAttribute(Constants.MAPPED_URL_SET, mappedUrls);
     }
 
     @Override

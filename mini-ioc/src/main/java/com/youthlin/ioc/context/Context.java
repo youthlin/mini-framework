@@ -36,6 +36,8 @@ public interface Context {
 
     <T> Set<T> getBeans(Class<T> clazz);
 
+    Object[] getBeans(Class<?>[] classes);
+
     /**
      * 获取容器中 Bean 的总数
      */

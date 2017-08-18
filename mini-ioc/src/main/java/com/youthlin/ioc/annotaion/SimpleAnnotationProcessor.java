@@ -190,14 +190,6 @@ public class SimpleAnnotationProcessor implements IAnnotationProcessor {
         //todo 请你实现
     }
 
-    private Object[] getBeans(Context context, Class[] clazz) {
-        Object[] beans = new Object[clazz.length];
-        for (int i = 0; i < clazz.length; i++) {
-            beans[i] = context.getBean(clazz[i]);
-        }
-        return beans;
-    }
-
     private void postConstruct(Context context, Object bean) {
         Method[] methods = bean.getClass().getDeclaredMethods();
         if (methods != null) {
@@ -205,7 +197,7 @@ public class SimpleAnnotationProcessor implements IAnnotationProcessor {
                 PostConstruct postConstruct = AnnotationUtil.getAnnotation(method, PostConstruct.class);
                 if (postConstruct != null) {
                     Class<?>[] parameterTypes = method.getParameterTypes();
-                    Object[] parameters = getBeans(context, parameterTypes);
+                    Object[] parameters = context.getBeans(parameterTypes);
                     try {
                         method.setAccessible(true);
                         method.invoke(bean, parameters);
