@@ -58,7 +58,7 @@ public class ThymeleafView implements View {
             init(request.getServletContext());
         }
         if (AnnotationUtil.getAnnotation(controllerAndMethod.getMethod(), ResponseBody.class) != null
-                && !(result instanceof String)) {
+                || !(result instanceof String)) {
             return false;//不处理 ResponseBody
         }
 
