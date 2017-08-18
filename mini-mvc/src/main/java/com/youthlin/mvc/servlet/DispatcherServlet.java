@@ -1,6 +1,5 @@
 package com.youthlin.mvc.servlet;
 
-import com.youthlin.ioc.annotaion.AnnotationUtil;
 import com.youthlin.ioc.context.Context;
 import com.youthlin.mvc.annotation.HttpMethod;
 import com.youthlin.mvc.annotation.Param;
@@ -13,7 +12,6 @@ import com.youthlin.mvc.support.View;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.annotation.PreDestroy;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
@@ -421,26 +419,6 @@ public class DispatcherServlet extends HttpServlet {
 
     private void sendError404(HttpServletRequest request, HttpServletResponse response) throws IOException {
         response.sendError(HttpServletResponse.SC_NOT_FOUND);
-    }
-
-    @Override public void destroy() {
-        LOGGER.info("destroy");
-        for (Object bean : getContext().getBeans()) {
-            for (Method method : bean.getClass().getDeclaredMethods()) {
-                PreDestroy preDestroy = AnnotationUtil.getAnnotation(method, PreDestroy.class);
-                if (preDestroy != null) {
-                    Class<?>[] parameterTypes = method.getParameterTypes();
-                    Object[] parameters = getContext().getBeans(parameterTypes);
-                    try {
-                        method.invoke(bean, parameters);
-                    } catch (ReflectiveOperationException e) {
-                        LOGGER.error("Error occurs when invoke PreDestroy method {} of bean {}", method, bean);
-                    }
-                    break;
-                }
-            }
-        }
-        super.destroy();
     }
 
 }

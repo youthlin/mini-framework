@@ -10,6 +10,7 @@ import com.youthlin.mvc.servlet.Constants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.annotation.PreDestroy;
 import javax.servlet.ServletContext;
 import javax.servlet.ServletContextEvent;
 import javax.servlet.ServletContextListener;
@@ -119,7 +120,22 @@ public class ContextLoaderListener implements ServletContextListener {
 
     @Override
     public void contextDestroyed(ServletContextEvent sce) {
-        LOGGER.debug("contextDestroyed, sce = {}", sce);
+        System.out.println(sce);
+        for (Object bean : container.getBeans()) {
+            for (Method method : bean.getClass().getDeclaredMethods()) {
+                PreDestroy preDestroy = AnnotationUtil.getAnnotation(method, PreDestroy.class);
+                if (preDestroy != null) {
+                    Class<?>[] parameterTypes = method.getParameterTypes();
+                    Object[] parameters = container.getBeans(parameterTypes);
+                    try {
+                        method.invoke(bean, parameters);
+                    } catch (ReflectiveOperationException e) {
+                        LOGGER.error("Error occurs when invoke PreDestroy method {} of bean {}", method, bean);
+                    }
+                    break;
+                }
+            }
+        }
     }
 
 }
