@@ -85,7 +85,7 @@ public class SimpleAnnotationProcessor implements IAnnotationProcessor {
                                  Arrays.toString(aClass.getAnnotations()));
                 }
             }
-        } catch (ClassNotFoundException | NoClassDefFoundError e) {
+        } catch (ClassNotFoundException | NoClassDefFoundError | UnsatisfiedLinkError e) {
             context.addUnloadedClass(className);
             LOGGER.trace("can not load class: {}", className, e);//很常见的 第三方依赖的类可能不在 classpath 中
         } catch (Throwable e) {

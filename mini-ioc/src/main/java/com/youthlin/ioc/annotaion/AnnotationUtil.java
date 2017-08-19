@@ -14,6 +14,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -33,7 +34,8 @@ import java.util.jar.JarFile;
 @SuppressWarnings("WeakerAccess")
 public class AnnotationUtil {
     private static final Logger LOGGER = LoggerFactory.getLogger(AnnotationUtil.class);
-    private static final String FILE_SEPARATOR = System.getProperty("file.separator", "/");
+    private static final String FORWARD_CHAR = "/";
+    private static final String META_INF = "META-INF";
     private static final String DOT_CLASS = ".class";
     private static final String DOLLAR = "$";
     private static final String DOT = ".";
@@ -66,7 +68,7 @@ public class AnnotationUtil {
         List<String> classNames = new ArrayList<>();
         try {
             Enumeration<URL> systemResources = Thread.currentThread().getContextClassLoader()
-                                                     .getResources(basePackage.replace(DOT, FILE_SEPARATOR));
+                    .getResources(basePackage.replace(DOT, FORWARD_CHAR));
             while (systemResources.hasMoreElements()) {
                 URL url = systemResources.nextElement();
                 if (url != null) {
@@ -74,6 +76,9 @@ public class AnnotationUtil {
                 }
             }
         } catch (IOException ignore) {
+        }
+        if (basePackage.isEmpty()) {
+            classNames.addAll(getClassNames(META_INF));
         }
         return classNames;
     }
@@ -97,9 +102,12 @@ public class AnnotationUtil {
 
     private static List<String> getClassNamesFromFileSystem(String basePackage, URL url) {
         List<String> classNames = new ArrayList<>();
-        String fileName = url.getFile();
-        fileName = fileName.replace("%20", " ");
-        File file = new File(fileName);
+        File file;
+        try {
+            file = new File(url.toURI());
+        } catch (URISyntaxException e) {
+            throw new IllegalArgumentException(e);
+        }
         File[] files = file.listFiles(FILE_FILTER);
         if (files != null) {
             for (File file1 : files) {
@@ -134,6 +142,9 @@ public class AnnotationUtil {
 
     private static List<String> getClassNamesFromJar(String basePackage, URL url) {
         List<String> classNames = new ArrayList<>();
+        if (META_INF.equals(basePackage)) {
+            basePackage = "";
+        }
         String jarFileName = url.toString();
         jarFileName = jarFileName.replace("%20", " ");
         jarFileName = jarFileName.substring("jar:file:".length());
