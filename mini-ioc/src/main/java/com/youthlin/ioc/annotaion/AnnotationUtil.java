@@ -66,7 +66,7 @@ public class AnnotationUtil {
         List<String> classNames = new ArrayList<>();
         try {
             Enumeration<URL> systemResources = Thread.currentThread().getContextClassLoader()
-                    .getResources(basePackage.replace(DOT, FILE_SEPARATOR));
+                                                     .getResources(basePackage.replace(DOT, FILE_SEPARATOR));
             while (systemResources.hasMoreElements()) {
                 URL url = systemResources.nextElement();
                 if (url != null) {
@@ -329,7 +329,7 @@ public class AnnotationUtil {
      * @param field 要处理的字段
      * @param index 泛型列表中第几个, 0开始. 如{@code Map<String, Object> map} 0 表示第一个 String.class, 1 表示第二个 Object.class
      * @return 泛型的类型
-     * @throws IllegalArgumentException  当字段不是泛型时
+     * @throws IllegalArgumentException  当字段不是泛型时 或超过一层泛型时
      * @throws IndexOutOfBoundsException 当下标越界时
      */
     public static Class getGenericClass(Field field, int index) {

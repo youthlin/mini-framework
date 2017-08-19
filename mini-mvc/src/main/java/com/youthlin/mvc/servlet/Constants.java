@@ -4,6 +4,7 @@ package com.youthlin.mvc.servlet;
  * 创建：youthlin.chen
  * 时间：2017-08-17 23:21
  */
+@SuppressWarnings("WeakerAccess")
 public class Constants {
     public static final String FORWARD_CHAR = "/";
     public static final String CONTAINER = "_MINI_IOC_CONTAINER";

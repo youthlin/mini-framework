@@ -30,12 +30,18 @@ public interface Context {
     <T> T getBean(Class<T> clazz);
 
     /**
-     * 根据名称和类型获取 Bean, 当找不到时返回{@code null}
+     * 根据名称和类型获取 Bean, 当找不到或找到多个时返回{@code null}
      */
     <T> T getBean(String name, Class<T> clazz);
 
+    /**
+     * 根据类型获取 Bean
+     */
     <T> Set<T> getBeans(Class<T> clazz);
 
+    /**
+     * 根据类型获取 Bean 数组，结果数组和传入的参数类型一一对应
+     */
     Object[] getBeans(Class<?>[] classes);
 
     /**

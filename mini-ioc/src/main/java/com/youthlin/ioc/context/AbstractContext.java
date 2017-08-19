@@ -9,6 +9,7 @@ import com.youthlin.ioc.spi.IPreScanner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -129,17 +130,17 @@ public abstract class AbstractContext implements Context {
 
     @Override
     public Map<String, Object> getNameBeanMap() {
-        return nameBeanMap;
+        return Collections.unmodifiableMap(nameBeanMap);
     }
 
     @Override
     public Map<Class, Object> getClazzBeanMap() {
-        return clazzBeanMap;
+        return Collections.unmodifiableMap(clazzBeanMap);
     }
 
     @Override
     public Set<String> getUnloadedClass() {
-        return unloadedClassName;
+        return Collections.unmodifiableSet(unloadedClassName);
     }
 
     protected AbstractContext setNameBeanMap(Map<String, Object> nameBeanMap) {

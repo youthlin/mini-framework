@@ -96,7 +96,7 @@ public class SimpleAnnotationProcessor implements IAnnotationProcessor {
 
     protected boolean shouldNewInstance(Class c) {
         int modifiers = c.getModifiers();
-        return !Modifier.isInterface(modifiers) && !Modifier.isAbstract(modifiers) && Modifier.isPublic(modifiers);
+        return !Modifier.isInterface(modifiers) && !Modifier.isAbstract(modifiers);
     }
 
     protected void afterRegister(Context context) {

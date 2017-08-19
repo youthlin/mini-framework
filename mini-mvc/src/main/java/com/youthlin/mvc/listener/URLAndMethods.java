@@ -8,6 +8,7 @@ import java.util.Arrays;
  * 创建： youthlin.chen
  * 时间： 2017-08-13 16:03.
  */
+@SuppressWarnings("WeakerAccess")
 public class URLAndMethods {
     private String url;
     private HttpMethod[] httpMethods;
@@ -17,27 +18,28 @@ public class URLAndMethods {
     public static final HttpMethod[] HTTP_METHODS_POST = new HttpMethod[]{HttpMethod.POST};
     public static final HttpMethod[] HTTP_METHODS_PUT = new HttpMethod[]{HttpMethod.PUT};
     public static final HttpMethod[] HTTP_METHODS_PATCH = new HttpMethod[]{HttpMethod.PATCH};
+    public static final HttpMethod[] HTTP_METHODS_DELETE = new HttpMethod[]{HttpMethod.DELETE};
     public static final HttpMethod[] HTTP_METHODS_OPTIONS = new HttpMethod[]{HttpMethod.OPTIONS};
     public static final HttpMethod[] HTTP_METHODS_TRACE = new HttpMethod[]{HttpMethod.TRACE};
 
     public static HttpMethod[] method(String method) {
         switch (method) {
             case "GET":
-                return new HttpMethod[]{HttpMethod.GET};
+                return HTTP_METHODS_GET;
             case "HEAD":
-                return new HttpMethod[]{HttpMethod.HEAD};
+                return HTTP_METHODS_HEAD;
             case "POST":
-                return new HttpMethod[]{HttpMethod.POST};
+                return HTTP_METHODS_POST;
             case "PUT":
-                return new HttpMethod[]{HttpMethod.PUT};
+                return HTTP_METHODS_PUT;
             case "PATCH":
-                return new HttpMethod[]{HttpMethod.PATCH};
+                return HTTP_METHODS_PATCH;
             case "DELETE":
-                return new HttpMethod[]{HttpMethod.DELETE};
+                return HTTP_METHODS_DELETE;
             case "OPTIONS":
-                return new HttpMethod[]{HttpMethod.OPTIONS};
+                return HTTP_METHODS_OPTIONS;
             case "TRACE":
-                return new HttpMethod[]{HttpMethod.TRACE};
+                return HTTP_METHODS_TRACE;
         }
         return EMPTY_HTTP_METHODS;
     }
