@@ -23,14 +23,14 @@ public class DefaultView implements View {
     private static final ResponseBodyHandler DEFAULT_RESPONSE_BODY_HANDLER = new DefaultResponseBodyHandler();
 
     @Override
-    public boolean render(HttpServletRequest req, HttpServletResponse resp,
-            Map<String, Object> model, Object result, ControllerAndMethod controllerAndMethod) throws Exception {
+    public boolean render(HttpServletRequest req, HttpServletResponse resp, Map<String, Object> model, Object result,
+            ControllerAndMethod controllerAndMethod) throws Exception {
         Method method = controllerAndMethod.getMethod();
         ResponseBody responseBody = AnnotationUtil.getAnnotation(method, ResponseBody.class);
         if (responseBody != null) {
             Context context = DispatcherServlet.getContext(req);
-            List<ResponseBodyHandler> responseBodyHandlerList =
-                    new ArrayList<>(context.getBeans(ResponseBodyHandler.class));
+            List<ResponseBodyHandler> responseBodyHandlerList = new ArrayList<>(
+                    context.getBeans(ResponseBodyHandler.class));
             Collections.sort(responseBodyHandlerList, Ordered.DEFAULT_ORDERED_COMPARATOR);
             boolean processed = false;
             for (ResponseBodyHandler responseBodyHandler : responseBodyHandlerList) {
@@ -44,18 +44,11 @@ public class DefaultView implements View {
                 DEFAULT_RESPONSE_BODY_HANDLER.handler(req, resp, result);
             }
         } else {
-            //返回字符串：页面
+            //返回字符串：页面 redirect 和 forward 已经在 DispatcherServlet 中处理了
             if (result instanceof String) {
-                if (((String) result).startsWith(Constants.REDIRECT)) {
-                    resp.sendRedirect(((String) result).substring(Constants.REDIRECT.length()));
-                } else if (((String) result).startsWith(Constants.FORWARD)) {
-                    req.getRequestDispatcher(((String) result).substring(Constants.FORWARD.length()))
-                            .forward(req, resp);
-                } else {
-                    String prefix = (String) req.getServletContext().getAttribute(Constants.VIEW_PREFIX);
-                    String suffix = (String) req.getServletContext().getAttribute(Constants.VIEW_SUFFIX);
-                    req.getRequestDispatcher(prefix + result + suffix).forward(req, resp);
-                }
+                String prefix = (String) req.getServletContext().getAttribute(Constants.VIEW_PREFIX);
+                String suffix = (String) req.getServletContext().getAttribute(Constants.VIEW_SUFFIX);
+                req.getRequestDispatcher(prefix + result + suffix).forward(req, resp);
             } else {
                 throw new RuntimeException(
                         "You can only return String value when there is no @ResponseBody on method.");

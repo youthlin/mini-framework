@@ -67,22 +67,7 @@ public class DispatcherServlet extends HttpServlet {
         String reqMethod = req.getMethod();
         String uri = req.getRequestURI();
         LOGGER.debug("uri = {}, method = {}", uri, reqMethod);
-        Map<URLAndMethods, ControllerAndMethod> urlMappingMap = getUrlMappingMap();
-        URLAndMethods urlAndMethods = new URLAndMethods(uri, URLAndMethods.method(reqMethod));
-        ControllerAndMethod controllerAndMethod = urlMappingMap.get(urlAndMethods);
-        if (controllerAndMethod == null) {
-            urlAndMethods = new URLAndMethods(uri, URLAndMethods.EMPTY_HTTP_METHODS);
-            controllerAndMethod = urlMappingMap.get(urlAndMethods);
-        }
-        int lastIndexOfDot = uri.lastIndexOf(Constants.DOT);
-        if (controllerAndMethod == null && lastIndexOfDot > 0) {// url:/get/some.html -> /get/some
-            urlAndMethods = new URLAndMethods(uri.substring(0, lastIndexOfDot), URLAndMethods.method(reqMethod));
-            controllerAndMethod = urlMappingMap.get(urlAndMethods);
-            if (controllerAndMethod == null) {
-                urlAndMethods = new URLAndMethods(uri.substring(0, lastIndexOfDot), URLAndMethods.EMPTY_HTTP_METHODS);
-                controllerAndMethod = urlMappingMap.get(urlAndMethods);
-            }
-        }
+        ControllerAndMethod controllerAndMethod = findControllerAndMethod(uri, reqMethod);
         try {
             if (controllerAndMethod != null) {
                 dispatch(req, resp, controllerAndMethod);
@@ -98,6 +83,27 @@ public class DispatcherServlet extends HttpServlet {
             }
             throw new ServletException(e);
         }
+    }
+
+    private ControllerAndMethod findControllerAndMethod(String requestURI, String reqMethod) {
+        Map<URLAndMethods, ControllerAndMethod> urlMappingMap = getUrlMappingMap();
+        URLAndMethods urlAndMethods = new URLAndMethods(requestURI, URLAndMethods.method(reqMethod));
+        ControllerAndMethod controllerAndMethod = urlMappingMap.get(urlAndMethods);
+        if (controllerAndMethod == null) {
+            urlAndMethods = new URLAndMethods(requestURI, URLAndMethods.EMPTY_HTTP_METHODS);
+            controllerAndMethod = urlMappingMap.get(urlAndMethods);
+        }
+        int lastIndexOfDot = requestURI.lastIndexOf(Constants.DOT);
+        if (controllerAndMethod == null && lastIndexOfDot > 0) {// url:/get/some.html -> /get/some
+            urlAndMethods = new URLAndMethods(requestURI.substring(0, lastIndexOfDot), URLAndMethods.method(reqMethod));
+            controllerAndMethod = urlMappingMap.get(urlAndMethods);
+            if (controllerAndMethod == null) {
+                urlAndMethods = new URLAndMethods(requestURI.substring(0, lastIndexOfDot),
+                                                  URLAndMethods.EMPTY_HTTP_METHODS);
+                controllerAndMethod = urlMappingMap.get(urlAndMethods);
+            }
+        }
+        return controllerAndMethod;
     }
 
     // ---------------------------------------------------------------------------------
@@ -167,8 +173,8 @@ public class DispatcherServlet extends HttpServlet {
                 String value = getParameter(req, param);
                 if (parameterType.isAssignableFrom(String.class)) {
                     parameter[i] = getParameter(req, param);
-                } else if (parameterType.isAssignableFrom(double.class) || parameterType
-                        .isAssignableFrom(Double.class)) {
+                } else if (parameterType.isAssignableFrom(double.class) ||
+                        parameterType.isAssignableFrom(Double.class)) {
                     parameter[i] = Double.parseDouble(value);
                 } else if (parameterType.isAssignableFrom(float.class) || parameterType.isAssignableFrom(Float.class)) {
                     parameter[i] = Float.parseFloat(value);
@@ -180,11 +186,11 @@ public class DispatcherServlet extends HttpServlet {
                     parameter[i] = Short.parseShort(value);
                 } else if (parameterType.isAssignableFrom(byte.class) || parameterType.isAssignableFrom(Byte.class)) {
                     parameter[i] = Byte.parseByte(value);
-                } else if (parameterType.isAssignableFrom(boolean.class)
-                        || parameterType.isAssignableFrom(Boolean.class)) {
+                } else if (parameterType.isAssignableFrom(boolean.class) ||
+                        parameterType.isAssignableFrom(Boolean.class)) {
                     parameter[i] = Boolean.parseBoolean(value);
-                } else if (parameterType.isAssignableFrom(char.class)
-                        || parameterType.isAssignableFrom(Character.class)) {
+                } else if (parameterType.isAssignableFrom(char.class) ||
+                        parameterType.isAssignableFrom(Character.class)) {
                     if (value.length() == 1) {
                         parameter[i] = value.charAt(0);
                     } else {
@@ -274,9 +280,13 @@ public class DispatcherServlet extends HttpServlet {
     /**
      * 处理 Controller 方法返回值
      */
-    protected void processInvokeResult(HttpServletRequest req, HttpServletResponse resp,
-            Map<String, Object> model, Object result,
-            ControllerAndMethod controllerAndMethod) throws Exception {
+    protected void processInvokeResult(HttpServletRequest req, HttpServletResponse resp, Map<String, Object> model,
+            Object result, ControllerAndMethod controllerAndMethod) throws Throwable {
+        if (result instanceof String &&
+                (((String) result).startsWith(Constants.FORWARD) || ((String) result).startsWith(Constants.REDIRECT))) {
+            processRedirectOrForward(req, resp, model, (String) result, controllerAndMethod);
+            return;
+        }
         List<View> sortedViewList = new ArrayList<>(getContext().getBeans(View.class));
         Collections.sort(sortedViewList, Ordered.DEFAULT_ORDERED_COMPARATOR);
         boolean rendered = false;
@@ -288,6 +298,22 @@ public class DispatcherServlet extends HttpServlet {
         }
         if (!rendered) {
             DEFAULT_VIEW.render(req, resp, model, result, controllerAndMethod);
+        }
+    }
+
+    protected void processRedirectOrForward(HttpServletRequest req, HttpServletResponse resp, Map<String, Object> model,
+            String result, ControllerAndMethod controllerAndMethod) throws Throwable {
+        if (result.startsWith(Constants.REDIRECT)) {
+            resp.sendRedirect(result);
+        } else if (result.startsWith(Constants.FORWARD)) {
+            String requestURI = result.substring(Constants.FORWARD.length());
+            String reqMethod = req.getMethod();
+            ControllerAndMethod forwardHandler = findControllerAndMethod(requestURI, reqMethod);
+            if (forwardHandler != null) {
+                dispatch(req, resp, forwardHandler);
+            } else {
+                req.getRequestDispatcher(requestURI).forward(req, resp);
+            }
         }
     }
 
@@ -323,6 +349,7 @@ public class DispatcherServlet extends HttpServlet {
      * 没有匹配到 Controller
      */
     protected void processNoMatch(HttpServletRequest req, HttpServletResponse resp) throws Throwable {
+        @SuppressWarnings("unchecked")
         Set<String> mappedUrls = (Set<String>) getServletContext().getAttribute(Constants.MAPPED_URL_SET);
         String requestURI = req.getRequestURI();
         boolean containsURI = mappedUrls.contains(requestURI);

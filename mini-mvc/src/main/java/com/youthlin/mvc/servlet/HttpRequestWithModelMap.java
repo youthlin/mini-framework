@@ -17,6 +17,9 @@ class HttpRequestWithModelMap extends HttpServletRequestFacade implements HttpSe
 
     HttpRequestWithModelMap(HttpServletRequest request) {
         super(request);
+        if (request instanceof HttpRequestWithModelMap) {
+            this.map.putAll(((HttpRequestWithModelMap) request).getMap());//when forward a request
+        }
     }
 
     @Override

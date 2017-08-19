@@ -14,6 +14,9 @@ class ModelWithRequest extends LinkedHashMap<String, Object> {
     ModelWithRequest(HttpServletRequest request) {
         super();
         this.request = request;
+        if (request instanceof HttpRequestWithModelMap) {
+            this.putAll(((HttpRequestWithModelMap) request).getMap());//when forward a request
+        }
     }
 
     @Override
