@@ -81,15 +81,15 @@ public class SimpleAnnotationProcessor implements IAnnotationProcessor {
                 if (shouldNewInstance(aClass)) {
                     Object o = aClass.newInstance();
                     context.registerBean(o, name);
-                    LOGGER.debug("find bean: {}, name: {}, annotations: {}",
-                            o.getClass(), name, Arrays.toString(aClass.getAnnotations()));
+                    LOGGER.debug("find bean: {}, name: {}, annotations: {}", o.getClass(), name,
+                                 Arrays.toString(aClass.getAnnotations()));
                 }
             }
         } catch (ClassNotFoundException | NoClassDefFoundError e) {
-            context.getUnloadedClass().add(className);
+            context.addUnloadedClass(className);
             LOGGER.trace("can not load class: {}", className, e);//很常见的 第三方依赖的类可能不在 classpath 中
         } catch (Throwable e) {
-            context.getUnloadedClass().add(className);
+            context.addUnloadedClass(className);
             LOGGER.warn("can not load class: {}", className, e);
         }
     }
@@ -164,11 +164,11 @@ public class SimpleAnnotationProcessor implements IAnnotationProcessor {
         if (filedValue != null) {
             //集合类可能已经初始化 @Bean private Map<String, IUserDao> userDaoMap = new HashMap<>();
             if (Collection.class.isAssignableFrom(type)) {//这个字段可以强制转换为 Collection
-                ((Collection) filedValue).addAll(AnnotationUtil
-                        .getBeans(context.getClazzBeanMap(), AnnotationUtil.getGenericClass(field, 0)));
+                ((Collection) filedValue).addAll(AnnotationUtil.getBeans(context.getClazzBeanMap(),
+                                                                         AnnotationUtil.getGenericClass(field, 0)));
             } else if (Map.class.isAssignableFrom(type)) {//这个字段可以强制转换为 Map
-                ((Map) filedValue).putAll(AnnotationUtil
-                        .getBeansMap(context.getClazzBeanMap(), AnnotationUtil.getGenericClass(field, 1)));
+                ((Map) filedValue).putAll(AnnotationUtil.getBeansMap(context.getClazzBeanMap(),
+                                                                     AnnotationUtil.getGenericClass(field, 1)));
             } else {
                 LOGGER.warn("{}, {}", field, filedValue);
                 throw new BeanInjectException("this field already has a value but also has @Bean.");
@@ -179,8 +179,8 @@ public class SimpleAnnotationProcessor implements IAnnotationProcessor {
                         .getBeans(context.getClazzBeanMap(), AnnotationUtil.getGenericClass(field, 0));
             } else if (type.isAssignableFrom(Set.class)) {
                 Set set = new HashSet();
-                set.addAll(AnnotationUtil
-                        .getBeans(context.getClazzBeanMap(), AnnotationUtil.getGenericClass(field, 0)));
+                set.addAll(
+                        AnnotationUtil.getBeans(context.getClazzBeanMap(), AnnotationUtil.getGenericClass(field, 0)));
                 filedValue = set;
             } else if (type.isAssignableFrom(Map.class)) {
                 filedValue = AnnotationUtil

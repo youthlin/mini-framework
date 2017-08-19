@@ -143,6 +143,11 @@ public abstract class AbstractContext implements Context {
         return Collections.unmodifiableSet(unloadedClassName);
     }
 
+    @Override
+    public boolean addUnloadedClass(String className) {
+        return unloadedClassName.add(className);
+    }
+
     protected AbstractContext setNameBeanMap(Map<String, Object> nameBeanMap) {
         this.nameBeanMap = nameBeanMap;
         return this;

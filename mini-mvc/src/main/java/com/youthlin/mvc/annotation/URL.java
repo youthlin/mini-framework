@@ -13,7 +13,7 @@ import java.lang.annotation.Target;
 @Target({ ElementType.TYPE, ElementType.METHOD })
 @Retention(RetentionPolicy.RUNTIME)
 public @interface URL {
-    String value() default "";
+    String[] value() default {};
 
     HttpMethod[] method() default {};
 

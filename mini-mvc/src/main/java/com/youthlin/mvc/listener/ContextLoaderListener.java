@@ -113,19 +113,24 @@ public class ContextLoaderListener implements ServletContextListener {
                         }
                         URL urlAnnotation = AnnotationUtil.getAnnotation(method, URL.class);
                         if (urlAnnotation != null) {
-                            String url = (String) AnnotationUtil.getValue(method, urlAnnotation);
+                            String[] urls = (String[]) AnnotationUtil.getValue(method, urlAnnotation);
                             HttpMethod[] urlHttpMethod = (HttpMethod[])
                                     AnnotationUtil.getValue(method, urlAnnotation, "method");
-                            if (!url.startsWith(Constants.FORWARD_CHAR)) {
-                                url = Constants.FORWARD_CHAR + url;
+                            if (urls.length>0) {
+                                for (String url : urls) {
+                                    if (!url.startsWith(Constants.FORWARD_CHAR)) {
+                                        url = Constants.FORWARD_CHAR + url;
+                                    }
+                                    url = urlPrefix + url;
+                                    URLAndMethods urlAndMethods = new URLAndMethods(url, urlHttpMethod);
+                                    ControllerAndMethod controllerAndMethod = new ControllerAndMethod(bean, method);
+                                    urlMapping.put(urlAndMethods, controllerAndMethod);
+                                    mappedUrls.add(url);
+                                    LOGGER.info("mapping url {} {} to method {}", url, Arrays.toString(urlHttpMethod), method);
+
+                                }
                             }
-                            url = urlPrefix + url;
-                            URLAndMethods urlAndMethods = new URLAndMethods(url, urlHttpMethod);
-                            ControllerAndMethod controllerAndMethod = new ControllerAndMethod(bean, method);
-                            urlMapping.put(urlAndMethods, controllerAndMethod);
-                            mappedUrls.add(url);
-                            LOGGER.info("mapping url {} {} to method {}", url, Arrays.toString(urlHttpMethod), method);
-                        }
+                      }
                     }
                 }
             }
