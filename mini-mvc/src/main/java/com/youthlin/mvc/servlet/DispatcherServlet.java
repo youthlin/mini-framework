@@ -304,7 +304,7 @@ public class DispatcherServlet extends HttpServlet {
     protected void processRedirectOrForward(HttpServletRequest req, HttpServletResponse resp, Map<String, Object> model,
             String result, ControllerAndMethod controllerAndMethod) throws Throwable {
         if (result.startsWith(Constants.REDIRECT)) {
-            resp.sendRedirect(result);
+            resp.sendRedirect(result.substring(Constants.REDIRECT.length()));
         } else if (result.startsWith(Constants.FORWARD)) {
             String requestURI = result.substring(Constants.FORWARD.length());
             String reqMethod = req.getMethod();
