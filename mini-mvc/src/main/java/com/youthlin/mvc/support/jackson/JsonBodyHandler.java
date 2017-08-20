@@ -1,6 +1,7 @@
 package com.youthlin.mvc.support.jackson;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.youthlin.ioc.annotaion.AnnotationUtil;
 import com.youthlin.mvc.support.ResponseBodyHandler;
 
@@ -14,6 +15,10 @@ import java.lang.reflect.Method;
  */
 public class JsonBodyHandler implements ResponseBodyHandler {
     private static final ObjectMapper objectMapper = new ObjectMapper();
+
+    static {
+        objectMapper.disable(SerializationFeature.FAIL_ON_EMPTY_BEANS);
+    }
 
     @Override
     public boolean accept(Method controllerMethod) {

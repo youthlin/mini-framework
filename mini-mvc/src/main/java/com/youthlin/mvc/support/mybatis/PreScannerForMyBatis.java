@@ -1,6 +1,5 @@
 package com.youthlin.mvc.support.mybatis;
 
-import com.sun.xml.internal.bind.v2.runtime.reflect.opt.Const;
 import com.youthlin.ioc.context.Context;
 import com.youthlin.ioc.spi.IPreScanner;
 import com.youthlin.mvc.servlet.Constants;

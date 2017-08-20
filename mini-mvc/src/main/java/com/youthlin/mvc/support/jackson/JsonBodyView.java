@@ -24,11 +24,7 @@ public class JsonBodyView implements View {
         if (AnnotationUtil.getAnnotation(controllerAndMethod.getMethod(), JsonBody.class) == null) {
             return false;
         }
-        try {
-            jsonBodyHandler.handler(request, response, result);
-        } catch (Exception e) {
-            return false;
-        }
+        jsonBodyHandler.handler(request, response, result);//if has exception, just throws out
         return true;
     }
 
