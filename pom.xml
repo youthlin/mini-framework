@@ -9,6 +9,9 @@
     <packaging>pom</packaging>
     <!-- mvn versions:set -DnewVersion=x.x.x -->
     <version>1.0.1</version>
+    <name>Mini Framework</name>
+    <description>A Mini Framework contains Mini-IoC, Mini-MVC, etc.</description>
+    <url>https://github.com/YouthLin/mini-framework</url>
     <modules>
         <module>mini-ioc</module>
         <module>mini-mvc</module>
