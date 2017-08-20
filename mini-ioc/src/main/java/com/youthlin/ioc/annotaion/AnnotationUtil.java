@@ -8,9 +8,13 @@ import javax.annotation.Resource;
 import java.io.File;
 import java.io.FileFilter;
 import java.io.IOException;
+import java.lang.annotation.Annotation;
+import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -30,12 +34,15 @@ import java.util.jar.JarFile;
 @SuppressWarnings("WeakerAccess")
 public class AnnotationUtil {
     private static final Logger LOGGER = LoggerFactory.getLogger(AnnotationUtil.class);
-    private static final String FILE_SEPARATOR = System.getProperty("file.separator", "/");
+    private static final String FORWARD_CHAR = "/";
+    private static final String META_INF = "META-INF";
     private static final String DOT_CLASS = ".class";
     private static final String DOLLAR = "$";
     private static final String DOT = ".";
+    private static final String VALUE = "value";
     private static final FileFilter FILE_FILTER = new FileFilter() {
-        @Override public boolean accept(File pathname) {
+        @Override
+        public boolean accept(File pathname) {
             if (pathname.isDirectory()) {
                 return true;
             }
@@ -47,7 +54,7 @@ public class AnnotationUtil {
     /**
      * 获取包路径之下的所有类名 不包括内部类和非 .class 结尾的类
      */
-    static Set<String> getClassNames(String... basePackages) {
+    public static Set<String> getClassNames(String... basePackages) {
         Set<String> classNames = new HashSet<>();
         if (basePackages != null) {
             for (String basePackage : basePackages) {
@@ -60,7 +67,8 @@ public class AnnotationUtil {
     private static List<String> getClassNames(String basePackage) {
         List<String> classNames = new ArrayList<>();
         try {
-            Enumeration<URL> systemResources = ClassLoader.getSystemResources(basePackage.replace(DOT, FILE_SEPARATOR));
+            Enumeration<URL> systemResources = Thread.currentThread().getContextClassLoader()
+                    .getResources(basePackage.replace(DOT, FORWARD_CHAR));
             while (systemResources.hasMoreElements()) {
                 URL url = systemResources.nextElement();
                 if (url != null) {
@@ -68,6 +76,9 @@ public class AnnotationUtil {
                 }
             }
         } catch (IOException ignore) {
+        }
+        if (basePackage.isEmpty()) {
+            classNames.addAll(getClassNames(META_INF));
         }
         return classNames;
     }
@@ -77,23 +88,26 @@ public class AnnotationUtil {
         LOGGER.debug("scan url = {}", url);
         String protocol = url.getProtocol();
         switch (protocol) {
-        case "file":
-            classNames.addAll(getClassNamesFromFileSystem(basePackage, url));
-            break;
-        case "jar":
-            classNames.addAll(getClassNamesFromJar(basePackage, url));
-            break;
-        default:
-            LOGGER.warn("unknown protocol. [{}]", protocol);
+            case "file":
+                classNames.addAll(getClassNamesFromFileSystem(basePackage, url));
+                break;
+            case "jar":
+                classNames.addAll(getClassNamesFromJar(basePackage, url));
+                break;
+            default:
+                LOGGER.warn("unknown protocol. [{}]", protocol);
         }
         return classNames;
     }
 
     private static List<String> getClassNamesFromFileSystem(String basePackage, URL url) {
         List<String> classNames = new ArrayList<>();
-        String fileName = url.getFile();
-        fileName = fileName.replace("%20", " ");
-        File file = new File(fileName);
+        File file;
+        try {
+            file = new File(url.toURI());
+        } catch (URISyntaxException e) {
+            throw new IllegalArgumentException(e);
+        }
         File[] files = file.listFiles(FILE_FILTER);
         if (files != null) {
             for (File file1 : files) {
@@ -128,6 +142,9 @@ public class AnnotationUtil {
 
     private static List<String> getClassNamesFromJar(String basePackage, URL url) {
         List<String> classNames = new ArrayList<>();
+        if (META_INF.equals(basePackage)) {
+            basePackage = "";
+        }
         String jarFileName = url.toString();
         jarFileName = jarFileName.replace("%20", " ");
         jarFileName = jarFileName.substring("jar:file:".length());
@@ -142,7 +159,7 @@ public class AnnotationUtil {
                 JarEntry jarEntry = entries.nextElement();
                 String name = jarEntry.getName();
                 if (name.endsWith(DOT_CLASS) && !name.contains(DOLLAR) && name.startsWith(basePackage)) {
-                    name = name.replace(FILE_SEPARATOR, DOT);
+                    name = name.replace("/", DOT);//jar 内都是 /
                     name = name.substring(0, name.lastIndexOf(DOT_CLASS));
                     classNames.add(name);
                 }
@@ -159,8 +176,8 @@ public class AnnotationUtil {
      * @return 如果注解定义了名称，直接返回；否则返回空字符串
      */
     static String getAnnotationName(Field field) {
-        Bean bean = field.getAnnotation(Bean.class);
-        Resource resource = field.getAnnotation(Resource.class);
+        Bean bean = getAnnotation(field, Bean.class);
+        Resource resource = getAnnotation(field, Resource.class);
         String name = "";
         if (bean != null) {
             name = bean.value();
@@ -171,27 +188,150 @@ public class AnnotationUtil {
     }
 
     /**
-     * 获取注解中定义的名称.
+     * Get a single {@link Annotation} of {@code annotationType} from the supplied
+     * Method, Constructor or Field. Meta-annotations will be searched if the annotation
+     * is not declared locally on the supplied element.
+     *
+     * @param ae             the Method, Constructor or Field from which to get the annotation
+     * @param annotationType the annotation class to look for, both locally and as a meta-annotation
+     * @return the matching annotation or {@code null} if not found
+     * @since 3.1
+     */
+    public static <T extends Annotation> T getAnnotation(AnnotatedElement ae, Class<T> annotationType) {
+        T ann = ae.getAnnotation(annotationType);
+        if (ann == null) {
+            for (Annotation metaAnn : ae.getAnnotations()) {
+                ann = metaAnn.annotationType().getAnnotation(annotationType);
+                if (ann != null) {
+                    break;
+                }
+            }
+        }
+        return ann;
+    }
+
+    /**
+     * Retrieve the <em>value</em> of the {@code &quot;value&quot;} attribute of a
+     * single-element Annotation, given an annotation instance.
+     *
+     * @param annotation the annotation instance from which to retrieve the value
+     * @return the attribute value, or {@code null} if not found
+     * @see #getValue(Annotation, String)
+     */
+    public static Object getValue(Annotation annotation) {
+        return getValue(annotation, VALUE);
+    }
+
+    /**
+     * Retrieve the <em>value</em> of a named Annotation attribute, given an annotation instance.
+     *
+     * @param annotation    the annotation instance from which to retrieve the value
+     * @param attributeName the name of the attribute value to retrieve
+     * @return the attribute value, or {@code null} if not found
+     * @see #getValue(Annotation)
+     */
+    public static Object getValue(Annotation annotation, String attributeName) {
+        try {
+            Method method = annotation.annotationType().getDeclaredMethod(attributeName);
+            return method.invoke(annotation);
+        } catch (Exception ex) {
+            return null;
+        }
+    }
+
+    /**
+     * Retrieve the <em>default value</em> of the {@code &quot;value&quot;} attribute
+     * of a single-element Annotation, given an annotation instance.
+     *
+     * @param annotation the annotation instance from which to retrieve the default value
+     * @return the default value, or {@code null} if not found
+     * @see #getDefaultValue(Annotation, String)
+     */
+    public static Object getDefaultValue(Annotation annotation) {
+        return getDefaultValue(annotation, VALUE);
+    }
+
+    /**
+     * Retrieve the <em>default value</em> of a named Annotation attribute, given an annotation instance.
+     *
+     * @param annotation    the annotation instance from which to retrieve the default value
+     * @param attributeName the name of the attribute value to retrieve
+     * @return the default value of the named attribute, or {@code null} if not found
+     * @see #getDefaultValue(Class, String)
+     */
+    public static Object getDefaultValue(Annotation annotation, String attributeName) {
+        return getDefaultValue(annotation.annotationType(), attributeName);
+    }
+
+    /**
+     * Retrieve the <em>default value</em> of the {@code &quot;value&quot;} attribute
+     * of a single-element Annotation, given the {@link Class annotation type}.
+     *
+     * @param annotationType the <em>annotation type</em> for which the default value should be retrieved
+     * @return the default value, or {@code null} if not found
+     * @see #getDefaultValue(Class, String)
+     */
+    public static Object getDefaultValue(Class<? extends Annotation> annotationType) {
+        return getDefaultValue(annotationType, VALUE);
+    }
+
+    /**
+     * Retrieve the <em>default value</em> of a named Annotation attribute, given the {@link Class annotation type}.
+     *
+     * @param annotationType the <em>annotation type</em> for which the default value should be retrieved
+     * @param attributeName  the name of the attribute value to retrieve.
+     * @return the default value of the named attribute, or {@code null} if not found
+     * @see #getDefaultValue(Annotation, String)
+     */
+    public static Object getDefaultValue(Class<? extends Annotation> annotationType, String attributeName) {
+        try {
+            Method method = annotationType.getDeclaredMethod(attributeName);
+            return method.getDefaultValue();
+        } catch (Exception ex) {
+            return null;
+        }
+    }
+
+    /**
+     * 获取注解(Bean/Controller/Service/Dao/Resource)中定义的名称.
      *
      * @return 如果注解定义了名称，返回名称，否则返回类名
      * @throws IllegalArgumentException 当类没有被注解时
      */
     static String getAnnotationName(Class<?> clazz) {
-        Bean beanAnnotation = clazz.getAnnotation(Bean.class);
-        Resource resourceAnnotation = clazz.getAnnotation(Resource.class);
+        Bean beanAnnotation = AnnotationUtil.getAnnotation(clazz, Bean.class);
+        Resource resourceAnnotation = AnnotationUtil.getAnnotation(clazz, Resource.class);
         if (beanAnnotation == null && resourceAnnotation == null) {
             throw new IllegalArgumentException("No @Bean or @Resource annotation at this object.");
         }
         String name;
         if (beanAnnotation != null) {
-            name = beanAnnotation.value();
+            name = (String) getValue(clazz, beanAnnotation);
         } else {
-            name = resourceAnnotation.name();
+            name = (String) getValue(clazz, resourceAnnotation, "name");
         }
-        if (name.isEmpty()) {
+        if (name == null || name.isEmpty()) {
             name = clazz.getSimpleName();
         }
         return name;
+    }
+
+    public static Object getValue(AnnotatedElement ae, Annotation annotation) {
+        return getValue(ae, annotation, VALUE);
+    }
+
+    public static Object getValue(AnnotatedElement ae, Annotation annotation, String attributeName) {
+        Annotation anno = ae.getAnnotation(annotation.annotationType());
+        if (anno != null) {//anno 直接注解在 clazz 上
+            return getValue(anno, attributeName);
+        }
+        for (Annotation at : ae.getAnnotations()) {
+            Annotation ata = at.annotationType().getAnnotation(annotation.annotationType());
+            if (ata != null) {//ata 注解在 at 上, at 注解在 clazz 上
+                return getValue(at, attributeName);
+            }
+        }
+        return null;
     }
 
     /**
@@ -200,7 +340,7 @@ public class AnnotationUtil {
      * @param field 要处理的字段
      * @param index 泛型列表中第几个, 0开始. 如{@code Map<String, Object> map} 0 表示第一个 String.class, 1 表示第二个 Object.class
      * @return 泛型的类型
-     * @throws IllegalArgumentException  当字段不是泛型时
+     * @throws IllegalArgumentException  当字段不是泛型时 或超过一层泛型时
      * @throws IndexOutOfBoundsException 当下标越界时
      */
     public static Class getGenericClass(Field field, int index) {

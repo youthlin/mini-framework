@@ -1,7 +1,6 @@
 package com.youthlin.ioc.annotaion;
 
-import java.util.Map;
-import java.util.Set;
+import com.youthlin.ioc.context.Context;
 
 /**
  * 注解处理器.
@@ -9,14 +8,6 @@ import java.util.Set;
  * 时间： 2017-08-11 09:48.
  */
 public interface IAnnotationProcessor {
-    void autoScan(String... scanPackages);
-
-    Set<String> getClassNames();
-
-    Set<String> getUnloadedClass();
-
-    Map<String, Object> getNameBeanMap();
-
-    Map<Class, Object> getClazzBeanMap();
+    void autoScan(Context context, String... scanPackages);
 
 }

@@ -6,7 +6,7 @@
             <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %highlight(%1.-1level) %cyan(%-40.40logger{40}):%L - %m%n</pattern>
         </encoder>
     </appender>
-    <logger name="com.youthlin.ioc" level="error">
+    <logger name="com.youthlin.mvc" level="error">
         <appender-ref ref="console"/>
     </logger>
 
