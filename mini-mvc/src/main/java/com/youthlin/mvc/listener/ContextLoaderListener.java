@@ -116,7 +116,7 @@ public class ContextLoaderListener implements ServletContextListener {
                             String[] urls = (String[]) AnnotationUtil.getValue(method, urlAnnotation);
                             HttpMethod[] urlHttpMethod = (HttpMethod[])
                                     AnnotationUtil.getValue(method, urlAnnotation, "method");
-                            if (urls.length>0) {
+                            if (urls.length > 0) {
                                 for (String url : urls) {
                                     if (!url.startsWith(Constants.FORWARD_CHAR)) {
                                         url = Constants.FORWARD_CHAR + url;
@@ -130,7 +130,7 @@ public class ContextLoaderListener implements ServletContextListener {
 
                                 }
                             }
-                      }
+                        }
                     }
                 }
             }

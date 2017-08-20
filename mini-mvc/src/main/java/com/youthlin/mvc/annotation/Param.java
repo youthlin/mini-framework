@@ -10,7 +10,7 @@ import java.lang.annotation.Target;
  * 创建： youthlin.chen
  * 时间： 2017-08-13 17:27.
  */
-@Target({ ElementType.PARAMETER })
+@Target({ElementType.PARAMETER})
 @Retention(RetentionPolicy.RUNTIME)
 public @interface Param {
     String value() default "";

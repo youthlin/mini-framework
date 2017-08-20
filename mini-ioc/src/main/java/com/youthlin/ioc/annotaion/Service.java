@@ -10,7 +10,7 @@ import java.lang.annotation.Target;
  * 时间： 2017-08-13 14:28.
  */
 @Bean
-@Target({ ElementType.TYPE })
+@Target({ElementType.TYPE})
 @Retention(RetentionPolicy.RUNTIME)
 public @interface Service {
     String value() default "";

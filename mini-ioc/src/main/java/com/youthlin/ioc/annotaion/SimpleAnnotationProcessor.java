@@ -82,7 +82,7 @@ public class SimpleAnnotationProcessor implements IAnnotationProcessor {
                     Object o = aClass.newInstance();
                     context.registerBean(o, name);
                     LOGGER.debug("find bean: {}, name: {}, annotations: {}", o.getClass(), name,
-                                 Arrays.toString(aClass.getAnnotations()));
+                            Arrays.toString(aClass.getAnnotations()));
                 }
             }
         } catch (ClassNotFoundException | NoClassDefFoundError | UnsatisfiedLinkError e) {
@@ -165,10 +165,10 @@ public class SimpleAnnotationProcessor implements IAnnotationProcessor {
             //集合类可能已经初始化 @Bean private Map<String, IUserDao> userDaoMap = new HashMap<>();
             if (Collection.class.isAssignableFrom(type)) {//这个字段可以强制转换为 Collection
                 ((Collection) filedValue).addAll(AnnotationUtil.getBeans(context.getClazzBeanMap(),
-                                                                         AnnotationUtil.getGenericClass(field, 0)));
+                        AnnotationUtil.getGenericClass(field, 0)));
             } else if (Map.class.isAssignableFrom(type)) {//这个字段可以强制转换为 Map
                 ((Map) filedValue).putAll(AnnotationUtil.getBeansMap(context.getClazzBeanMap(),
-                                                                     AnnotationUtil.getGenericClass(field, 1)));
+                        AnnotationUtil.getGenericClass(field, 1)));
             } else {
                 LOGGER.warn("{}, {}", field, filedValue);
                 throw new BeanInjectException("this field already has a value but also has @Bean.");

@@ -10,7 +10,7 @@ import java.lang.annotation.Target;
  * 时间： 2017-08-13 14:52.
  */
 @Bean
-@Target({ ElementType.TYPE })
+@Target({ElementType.TYPE})
 @Retention(RetentionPolicy.RUNTIME)
 public @interface Dao {
     String value() default "";

@@ -88,14 +88,14 @@ public class AnnotationUtil {
         LOGGER.debug("scan url = {}", url);
         String protocol = url.getProtocol();
         switch (protocol) {
-        case "file":
-            classNames.addAll(getClassNamesFromFileSystem(basePackage, url));
-            break;
-        case "jar":
-            classNames.addAll(getClassNamesFromJar(basePackage, url));
-            break;
-        default:
-            LOGGER.warn("unknown protocol. [{}]", protocol);
+            case "file":
+                classNames.addAll(getClassNamesFromFileSystem(basePackage, url));
+                break;
+            case "jar":
+                classNames.addAll(getClassNamesFromJar(basePackage, url));
+                break;
+            default:
+                LOGGER.warn("unknown protocol. [{}]", protocol);
         }
         return classNames;
     }

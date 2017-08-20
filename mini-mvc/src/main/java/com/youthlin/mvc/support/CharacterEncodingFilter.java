@@ -14,13 +14,14 @@ import java.io.IOException;
  * 创建： youthlin.chen
  * 时间： 2017-08-18 16:46.
  */
-@SuppressWarnings({ "WeakerAccess", "unused" })
+@SuppressWarnings({"WeakerAccess", "unused"})
 public class CharacterEncodingFilter implements Filter {
     private String encoding = "UTF-8";
     private boolean forceRequestEncoding = true;
     private boolean forceResponseEncoding = true;
 
-    @Override public void init(FilterConfig filterConfig) throws ServletException {
+    @Override
+    public void init(FilterConfig filterConfig) throws ServletException {
         String encoding = filterConfig.getInitParameter("encoding");
         if (encoding != null) {
             this.encoding = encoding;
@@ -35,7 +36,8 @@ public class CharacterEncodingFilter implements Filter {
         }
     }
 
-    @Override public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
+    @Override
+    public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
             throws IOException, ServletException {
         String encoding = getEncoding();
         if (encoding != null) {
@@ -49,7 +51,8 @@ public class CharacterEncodingFilter implements Filter {
         chain.doFilter(request, response);
     }
 
-    @Override public void destroy() {
+    @Override
+    public void destroy() {
 
     }
 

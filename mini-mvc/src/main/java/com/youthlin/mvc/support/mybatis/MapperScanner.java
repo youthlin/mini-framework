@@ -24,6 +24,7 @@ import java.sql.Statement;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 创建： youthlin.chen
@@ -46,7 +47,7 @@ public class MapperScanner {
     private String initSqlFile;
     private SqlSessionFactory factory;
     private SqlSessionManager manager;
-    private Map<Class, Object> mappers = new HashMap<>();
+    private Map<Class, Object> mappers = new ConcurrentHashMap<>();
 
     @SuppressWarnings("unchecked")
     public void scan(Context context) {
@@ -68,6 +69,8 @@ public class MapperScanner {
         }
         factory = new SqlSessionFactoryBuilder().build(in);
         manager = SqlSessionManager.newInstance(factory);//MyBatis 自带的 线程安全的 SqlSession
+        context.registerBean(factory);
+        context.registerBean(manager);
         Set<String> classNames = AnnotationUtil.getClassNames(scanPackages);
         for (String className : classNames) {
             try {

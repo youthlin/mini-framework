@@ -99,7 +99,7 @@ public class DispatcherServlet extends HttpServlet {
             controllerAndMethod = urlMappingMap.get(urlAndMethods);
             if (controllerAndMethod == null) {
                 urlAndMethods = new URLAndMethods(requestURI.substring(0, lastIndexOfDot),
-                                                  URLAndMethods.EMPTY_HTTP_METHODS);
+                        URLAndMethods.EMPTY_HTTP_METHODS);
                 controllerAndMethod = urlMappingMap.get(urlAndMethods);
             }
         }
@@ -366,22 +366,22 @@ public class DispatcherServlet extends HttpServlet {
         }
         String method = req.getMethod();
         switch (method) {
-        case "HEAD":
-            processHead(req, resp);
-            break;
-        case "OPTIONS":
-            processOptions(req, resp);
-            break;
-        case "TRACE":
-            super.doTrace(req, resp);
-            break;
-        case "GET":
-        case "POST":
-        case "PUT":
-        case "PATCH":
-        case "DELETE":
-        default:
-            sendError405(req, resp);
+            case "HEAD":
+                processHead(req, resp);
+                break;
+            case "OPTIONS":
+                processOptions(req, resp);
+                break;
+            case "TRACE":
+                super.doTrace(req, resp);
+                break;
+            case "GET":
+            case "POST":
+            case "PUT":
+            case "PATCH":
+            case "DELETE":
+            default:
+                sendError405(req, resp);
         }
     }
 
@@ -417,14 +417,14 @@ public class DispatcherServlet extends HttpServlet {
 
     private boolean supportHttpMethod(String requestUri, HttpMethod method) {
         switch (method) {
-        case HEAD:
-            return supportHttpMethod(requestUri, HttpMethod.GET);
-        case TRACE:
-        case OPTIONS:
-            return true;
+            case HEAD:
+                return supportHttpMethod(requestUri, HttpMethod.GET);
+            case TRACE:
+            case OPTIONS:
+                return true;
         }
         Map<URLAndMethods, ControllerAndMethod> urlMappingMap = getUrlMappingMap();
-        URLAndMethods urlAndMethods = new URLAndMethods(requestUri, new HttpMethod[] { method });
+        URLAndMethods urlAndMethods = new URLAndMethods(requestUri, new HttpMethod[]{method});
         return urlMappingMap.get(urlAndMethods) != null;
     }
 

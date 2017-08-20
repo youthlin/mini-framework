@@ -16,14 +16,16 @@ public class ControllerAndMethod {
         this.method = method;
     }
 
-    @Override public String toString() {
+    @Override
+    public String toString() {
         return "ControllerAndMethod{" +
                 "controller=" + controller +
                 ", method=" + method +
                 '}';
     }
 
-    @Override public boolean equals(Object o) {
+    @Override
+    public boolean equals(Object o) {
         if (this == o)
             return true;
         if (o == null || getClass() != o.getClass())
@@ -37,7 +39,8 @@ public class ControllerAndMethod {
         return method != null ? method.equals(that.method) : that.method == null;
     }
 
-    @Override public int hashCode() {
+    @Override
+    public int hashCode() {
         int result = controller != null ? controller.hashCode() : 0;
         result = 31 * result + (method != null ? method.hashCode() : 0);
         return result;

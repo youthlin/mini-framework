@@ -10,7 +10,7 @@ import java.lang.annotation.Target;
  * 时间： 2017-08-13 13:41.
  */
 @Bean
-@Target({ ElementType.TYPE })
+@Target({ElementType.TYPE})
 @Retention(RetentionPolicy.RUNTIME)
 public @interface Controller {
     String value() default "";
