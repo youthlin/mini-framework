@@ -8,7 +8,7 @@
     <artifactId>mini-framework</artifactId>
     <packaging>pom</packaging>
     <!-- mvn versions:set -DnewVersion=x.x.x -->
-    <version>1.0.1-SNAPSHOT</version>
+    <version>1.0.1</version>
     <modules>
         <module>mini-ioc</module>
         <module>mini-mvc</module>
