@@ -1,7 +1,9 @@
 package com.youthlin.mvc.support.mybatis;
 
+import com.sun.xml.internal.bind.v2.runtime.reflect.opt.Const;
 import com.youthlin.ioc.context.Context;
 import com.youthlin.ioc.spi.IPreScanner;
+import com.youthlin.mvc.servlet.Constants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -29,11 +31,11 @@ public class PreScannerForMyBatis implements IPreScanner {
     }
 
     private void setProperties(ServletContext servletContext, MapperScanner mapperScanner) {
-        String configFile = servletContext.getInitParameter(MapperScanner.CONFIG_FILE);
-        String scanAnnotation = servletContext.getInitParameter(MapperScanner.SCAN_ANNOTATION);
-        String scanPackagesStr = servletContext.getInitParameter(MapperScanner.SCAN_PACKAGES);
-        String initSql = servletContext.getInitParameter(MapperScanner.INIT_SQL);
-        String initSqlFileName = servletContext.getInitParameter(MapperScanner.INIT_FILE);
+        String configFile = servletContext.getInitParameter(Constants.MYBATIS_CONFIG_FILE);
+        String scanAnnotation = servletContext.getInitParameter(Constants.MYBATIS_SCAN_ANNOTATION);
+        String scanPackagesStr = servletContext.getInitParameter(Constants.MYBATIS_SCAN_PACKAGES);
+        String initSql = servletContext.getInitParameter(Constants.MYBATIS_INIT_SQL);
+        String initSqlFileName = servletContext.getInitParameter(Constants.MYBATIS_INIT_FILE);
         if (configFile != null) {
             mapperScanner.setConfigFile(configFile);
         }

@@ -3,8 +3,9 @@ package com.youthlin.mvc.servlet;
 import com.youthlin.ioc.context.Context;
 import com.youthlin.mvc.annotation.HttpMethod;
 import com.youthlin.mvc.annotation.Param;
+import com.youthlin.mvc.listener.ContextLoaderListener;
 import com.youthlin.mvc.listener.ControllerAndMethod;
-import com.youthlin.mvc.listener.URLAndMethods;
+import com.youthlin.mvc.listener.URLAndMethod;
 import com.youthlin.mvc.support.DefaultView;
 import com.youthlin.mvc.support.Interceptor;
 import com.youthlin.mvc.support.Ordered;
@@ -41,17 +42,13 @@ public class DispatcherServlet extends HttpServlet {
     // 默认视图
     private static final View DEFAULT_VIEW = new DefaultView();
 
-    public Context getContext() {
-        return (Context) super.getServletContext().getAttribute(Constants.CONTAINER);
-    }
-
-    public static Context getContext(HttpServletRequest request) {
-        return (Context) request.getServletContext().getAttribute(Constants.CONTAINER);
+    public static Context getContext() {
+        return ContextLoaderListener.getContext();
     }
 
     @SuppressWarnings("unchecked")
-    public Map<URLAndMethods, ControllerAndMethod> getUrlMappingMap() {
-        return (Map<URLAndMethods, ControllerAndMethod>) getServletContext().getAttribute(Constants.URL_MAPPING_MAP);
+    public Map<URLAndMethod, ControllerAndMethod> getUrlMappingMap() {
+        return (Map<URLAndMethod, ControllerAndMethod>) getServletContext().getAttribute(Constants.URL_MAPPING_MAP);
     }
 
     @SuppressWarnings("unchecked")
@@ -66,7 +63,7 @@ public class DispatcherServlet extends HttpServlet {
     protected void service(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         String reqMethod = req.getMethod();
         String uri = req.getRequestURI();
-        LOGGER.debug("uri = {}, method = {}", uri, reqMethod);
+        LOGGER.debug("{} {}", reqMethod, uri);
         ControllerAndMethod controllerAndMethod = findControllerAndMethod(uri, reqMethod);
         try {
             if (controllerAndMethod != null) {
@@ -86,21 +83,21 @@ public class DispatcherServlet extends HttpServlet {
     }
 
     private ControllerAndMethod findControllerAndMethod(String requestURI, String reqMethod) {
-        Map<URLAndMethods, ControllerAndMethod> urlMappingMap = getUrlMappingMap();
-        URLAndMethods urlAndMethods = new URLAndMethods(requestURI, URLAndMethods.method(reqMethod));
-        ControllerAndMethod controllerAndMethod = urlMappingMap.get(urlAndMethods);
+        Map<URLAndMethod, ControllerAndMethod> urlMappingMap = getUrlMappingMap();
+        reqMethod = reqMethod.toUpperCase();
+        URLAndMethod urlAndMethod = new URLAndMethod(requestURI, HttpMethod.fromName(reqMethod));
+        ControllerAndMethod controllerAndMethod = urlMappingMap.get(urlAndMethod);
         if (controllerAndMethod == null) {
-            urlAndMethods = new URLAndMethods(requestURI, URLAndMethods.EMPTY_HTTP_METHODS);
-            controllerAndMethod = urlMappingMap.get(urlAndMethods);
+            urlAndMethod = new URLAndMethod(requestURI);
+            controllerAndMethod = urlMappingMap.get(urlAndMethod);
         }
         int lastIndexOfDot = requestURI.lastIndexOf(Constants.DOT);
         if (controllerAndMethod == null && lastIndexOfDot > 0) {// url:/get/some.html -> /get/some
-            urlAndMethods = new URLAndMethods(requestURI.substring(0, lastIndexOfDot), URLAndMethods.method(reqMethod));
-            controllerAndMethod = urlMappingMap.get(urlAndMethods);
+            urlAndMethod = new URLAndMethod(requestURI.substring(0, lastIndexOfDot), HttpMethod.fromName(reqMethod));
+            controllerAndMethod = urlMappingMap.get(urlAndMethod);
             if (controllerAndMethod == null) {
-                urlAndMethods = new URLAndMethods(requestURI.substring(0, lastIndexOfDot),
-                        URLAndMethods.EMPTY_HTTP_METHODS);
-                controllerAndMethod = urlMappingMap.get(urlAndMethods);
+                urlAndMethod = new URLAndMethod(requestURI.substring(0, lastIndexOfDot));
+                controllerAndMethod = urlMappingMap.get(urlAndMethod);
             }
         }
         return controllerAndMethod;
@@ -134,9 +131,9 @@ public class DispatcherServlet extends HttpServlet {
             exception = e;// throw
         } finally {
             exception = afterCompletion(request, resp, controller, exception);
-        }
-        if (exception != null) {
-            throw exception;
+            if (exception != null) {
+                throw exception;
+            }
         }
     }
 
@@ -145,7 +142,6 @@ public class DispatcherServlet extends HttpServlet {
         //每个参数的 Param 注解 如果第零个参数没有 Param 注解 那么 params[0] 为 null
         Param[] params = getParams(method, parameterTypes);
         Object[] parameter = new Object[parameterTypes.length];//调用方法的实参
-
         for (int i = 0; i < parameterTypes.length; i++) {
             Class<?> parameterType = parameterTypes[i];
             Param param = params[i];
@@ -173,8 +169,7 @@ public class DispatcherServlet extends HttpServlet {
                 String value = getParameter(req, param);
                 if (parameterType.isAssignableFrom(String.class)) {
                     parameter[i] = getParameter(req, param);
-                } else if (parameterType.isAssignableFrom(double.class) ||
-                        parameterType.isAssignableFrom(Double.class)) {
+                } else if (parameterType.isAssignableFrom(double.class) || parameterType.isAssignableFrom(Double.class)) {
                     parameter[i] = Double.parseDouble(value);
                 } else if (parameterType.isAssignableFrom(float.class) || parameterType.isAssignableFrom(Float.class)) {
                     parameter[i] = Float.parseFloat(value);
@@ -186,11 +181,9 @@ public class DispatcherServlet extends HttpServlet {
                     parameter[i] = Short.parseShort(value);
                 } else if (parameterType.isAssignableFrom(byte.class) || parameterType.isAssignableFrom(Byte.class)) {
                     parameter[i] = Byte.parseByte(value);
-                } else if (parameterType.isAssignableFrom(boolean.class) ||
-                        parameterType.isAssignableFrom(Boolean.class)) {
+                } else if (parameterType.isAssignableFrom(boolean.class) || parameterType.isAssignableFrom(Boolean.class)) {
                     parameter[i] = Boolean.parseBoolean(value);
-                } else if (parameterType.isAssignableFrom(char.class) ||
-                        parameterType.isAssignableFrom(Character.class)) {
+                } else if (parameterType.isAssignableFrom(char.class) || parameterType.isAssignableFrom(Character.class)) {
                     if (value.length() == 1) {
                         parameter[i] = value.charAt(0);
                     } else {
@@ -335,7 +328,7 @@ public class DispatcherServlet extends HttpServlet {
 
     public ArrayList<Interceptor> getSortedInterceptors() {
         Set<Interceptor> interceptorSet = getContext().getBeans(Interceptor.class);
-        if (interceptorList == null || interceptorSet.size() != interceptorList.size()) {
+        if (interceptorList == null || interceptorSet.size() != interceptorList.size()) {//需要初始化或更新List
             interceptorList = new ArrayList<>();
             interceptorList.addAll(interceptorSet);
             Collections.sort(interceptorList, Ordered.DEFAULT_ORDERED_COMPARATOR);
@@ -387,10 +380,10 @@ public class DispatcherServlet extends HttpServlet {
 
     private void processHead(HttpServletRequest req, HttpServletResponse resp) throws Throwable {
         @SuppressWarnings("unchecked")
-        Map<URLAndMethods, ControllerAndMethod> urlMappingMap = getUrlMappingMap();
+        Map<URLAndMethod, ControllerAndMethod> urlMappingMap = getUrlMappingMap();
         String requestURI = req.getRequestURI();
-        URLAndMethods urlAndMethods = new URLAndMethods(requestURI, URLAndMethods.HTTP_METHODS_GET);
-        ControllerAndMethod controllerAndMethod = urlMappingMap.get(urlAndMethods);
+        URLAndMethod urlAndMethod = new URLAndMethod(requestURI, HttpMethod.GET);
+        ControllerAndMethod controllerAndMethod = urlMappingMap.get(urlAndMethod);
         if (controllerAndMethod == null) {
             sendError405(req, resp);
         } else {
@@ -423,9 +416,9 @@ public class DispatcherServlet extends HttpServlet {
             case OPTIONS:
                 return true;
         }
-        Map<URLAndMethods, ControllerAndMethod> urlMappingMap = getUrlMappingMap();
-        URLAndMethods urlAndMethods = new URLAndMethods(requestUri, new HttpMethod[]{method});
-        return urlMappingMap.get(urlAndMethods) != null;
+        Map<URLAndMethod, ControllerAndMethod> urlMappingMap = getUrlMappingMap();
+        URLAndMethod urlAndMethod = new URLAndMethod(requestUri, method);
+        return urlMappingMap.get(urlAndMethod) != null;
     }
 
     private void sendError405(HttpServletRequest request, HttpServletResponse response) throws IOException {
@@ -443,4 +436,9 @@ public class DispatcherServlet extends HttpServlet {
         response.sendError(HttpServletResponse.SC_NOT_FOUND);
     }
 
+    @Override
+    public void destroy() {
+        ContextLoaderListener.preDestroy();
+        super.destroy();
+    }
 }

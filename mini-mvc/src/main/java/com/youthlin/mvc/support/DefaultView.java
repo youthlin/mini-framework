@@ -3,6 +3,7 @@ package com.youthlin.mvc.support;
 import com.youthlin.ioc.annotaion.AnnotationUtil;
 import com.youthlin.ioc.context.Context;
 import com.youthlin.mvc.annotation.ResponseBody;
+import com.youthlin.mvc.listener.ContextLoaderListener;
 import com.youthlin.mvc.listener.ControllerAndMethod;
 import com.youthlin.mvc.servlet.Constants;
 import com.youthlin.mvc.servlet.DispatcherServlet;
@@ -28,7 +29,7 @@ public class DefaultView implements View {
         Method method = controllerAndMethod.getMethod();
         ResponseBody responseBody = AnnotationUtil.getAnnotation(method, ResponseBody.class);
         if (responseBody != null) {
-            Context context = DispatcherServlet.getContext(req);
+            Context context = ContextLoaderListener.getContext();
             List<ResponseBodyHandler> responseBodyHandlerList = new ArrayList<>(
                     context.getBeans(ResponseBodyHandler.class));
             Collections.sort(responseBodyHandlerList, Ordered.DEFAULT_ORDERED_COMPARATOR);
@@ -50,8 +51,7 @@ public class DefaultView implements View {
                 String suffix = (String) req.getServletContext().getAttribute(Constants.VIEW_SUFFIX);
                 req.getRequestDispatcher(prefix + result + suffix).forward(req, resp);
             } else {
-                throw new RuntimeException(
-                        "You can only return String value when there is no @ResponseBody on method.");
+                throw new RuntimeException("You can only return String value when there is no @ResponseBody on method.");
             }
         }
         return true;

@@ -34,16 +34,19 @@ import java.util.concurrent.ConcurrentSkipListSet;
 @SuppressWarnings("WeakerAccess")
 public class ContextLoaderListener implements ServletContextListener {
     private static final Logger LOGGER = LoggerFactory.getLogger(ContextLoaderListener.class);
-    private Context container;
-    private Map<URLAndMethods, ControllerAndMethod> urlMapping = new ConcurrentHashMap<>();
+    private Map<URLAndMethod, ControllerAndMethod> urlMapping = new ConcurrentHashMap<>();
     private Set<String> mappedUrls = new ConcurrentSkipListSet<>();
+    private static Context CONTAINER;
+
+    public static Context getContext() {
+        return CONTAINER;
+    }
 
     /**
      * 容器启动时自动执行
      */
     @Override
     public void contextInitialized(ServletContextEvent sce) {
-        LOGGER.debug("contextInitialized sce = {}", sce);
         init(sce);
         mapping(sce);
     }
@@ -51,7 +54,6 @@ public class ContextLoaderListener implements ServletContextListener {
     //初始化容器
     private void init(ServletContextEvent sce) {
         final ServletContext servletContext = sce.getServletContext();
-        LOGGER.debug("servlet context = {}, source = {}", servletContext, sce.getSource());
         servletContext.setAttribute(Constants.VIEW_PREFIX, "");
         servletContext.setAttribute(Constants.VIEW_SUFFIX, "");
         Enumeration<String> initParameterNames = servletContext.getInitParameterNames();
@@ -81,14 +83,14 @@ public class ContextLoaderListener implements ServletContextListener {
         for (IPreScanner preScanner : preScanners) {
             preScannerList.add(preScanner);
         }
-        container = new ClasspathContext(preScannerList, scanPackages);
-        LOGGER.info("register {} beans.", container.getBeanCount());
-        servletContext.setAttribute(Constants.CONTAINER, container);
+        CONTAINER = new ClasspathContext(preScannerList, scanPackages);
+        LOGGER.info("register {} beans.", CONTAINER.getBeanCount());
+        servletContext.setAttribute(Constants.CONTAINER, CONTAINER);
     }
 
     //映射 URL 到 Controller 方法
     private void mapping(ServletContextEvent sce) {
-        for (Object bean : container.getBeans()) {
+        for (Object bean : CONTAINER.getBeans()) {
             Class<?> beanClass = bean.getClass();
             Controller controller = AnnotationUtil.getAnnotation(beanClass, Controller.class);
             if (controller != null) {
@@ -111,25 +113,35 @@ public class ContextLoaderListener implements ServletContextListener {
                         if (method.getModifiers() != Modifier.PUBLIC) {
                             continue;
                         }
+                        ControllerAndMethod controllerAndMethod = new ControllerAndMethod(bean, method);
                         URL urlAnnotation = AnnotationUtil.getAnnotation(method, URL.class);
                         if (urlAnnotation != null) {
-                            String[] urls = (String[]) AnnotationUtil.getValue(method, urlAnnotation);
-                            HttpMethod[] urlHttpMethod = (HttpMethod[])
+                            HttpMethod[] urlHttpMethods = (HttpMethod[])
                                     AnnotationUtil.getValue(method, urlAnnotation, "method");
+                            if (urlHttpMethods == null) {
+                                continue;
+                            }
+                            String[] urls = (String[]) AnnotationUtil.getValue(method, urlAnnotation);
                             if (urls.length > 0) {
                                 for (String url : urls) {
                                     if (!url.startsWith(Constants.FORWARD_CHAR)) {
                                         url = Constants.FORWARD_CHAR + url;
                                     }
                                     url = urlPrefix + url;
-                                    URLAndMethods urlAndMethods = new URLAndMethods(url, urlHttpMethod);
-                                    ControllerAndMethod controllerAndMethod = new ControllerAndMethod(bean, method);
-                                    urlMapping.put(urlAndMethods, controllerAndMethod);
-                                    mappedUrls.add(url);
-                                    LOGGER.info("mapping url {} {} to method {}", url, Arrays.toString(urlHttpMethod), method);
-
+                                    if (urlHttpMethods.length == 0) {
+                                        URLAndMethod urlAndMethod = new URLAndMethod(url);//for all methods
+                                        urlMapping.put(urlAndMethod, controllerAndMethod);
+                                        mappedUrls.add(url);
+                                    }
+                                    for (HttpMethod urlHttpMethod : urlHttpMethods) {
+                                        URLAndMethod urlAndMethod = new URLAndMethod(url, urlHttpMethod);
+                                        urlMapping.put(urlAndMethod, controllerAndMethod);
+                                        mappedUrls.add(url);
+                                    }
                                 }
                             }
+                            LOGGER.info("mapping url {} {} to method {}",
+                                    Arrays.toString(urls), Arrays.toString(urlHttpMethods), method);
                         }
                     }
                 }
@@ -141,16 +153,22 @@ public class ContextLoaderListener implements ServletContextListener {
 
     @Override
     public void contextDestroyed(ServletContextEvent sce) {
-        System.out.println(sce);
-        if (container == null) {
+        // DispatcherServlet 在销毁时应当已经销毁了；
+        // 但若没有访问DispatcherServlet那么其实他是不会init的
+        // 也就不会销毁，所以这里也调一下
+        preDestroy();
+    }
+
+    public static void preDestroy() {
+        if (CONTAINER == null) {
             return;
         }
-        for (Object bean : container.getBeans()) {
+        for (Object bean : CONTAINER.getBeans()) {
             for (Method method : bean.getClass().getDeclaredMethods()) {
                 PreDestroy preDestroy = AnnotationUtil.getAnnotation(method, PreDestroy.class);
                 if (preDestroy != null) {
                     Class<?>[] parameterTypes = method.getParameterTypes();
-                    Object[] parameters = container.getBeans(parameterTypes);
+                    Object[] parameters = CONTAINER.getBeans(parameterTypes);
                     try {
                         method.invoke(bean, parameters);
                     } catch (ReflectiveOperationException e) {
@@ -161,5 +179,4 @@ public class ContextLoaderListener implements ServletContextListener {
             }
         }
     }
-
 }

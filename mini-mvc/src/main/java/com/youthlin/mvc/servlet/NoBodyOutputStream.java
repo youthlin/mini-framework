@@ -15,11 +15,8 @@ import java.util.ResourceBundle;
  * @see javax.servlet.http.HttpServlet
  */
 class NoBodyOutputStream extends ServletOutputStream {
-
-    private static final String LSTRING_FILE =
-            "javax.servlet.http.LocalStrings";
-    private static ResourceBundle lStrings =
-            ResourceBundle.getBundle(LSTRING_FILE);
+    private static final String LSTRING_FILE = "javax.servlet.http.LocalStrings";
+    private static ResourceBundle lStrings = ResourceBundle.getBundle(LSTRING_FILE);
 
     private int contentLength = 0;
 
@@ -38,13 +35,10 @@ class NoBodyOutputStream extends ServletOutputStream {
     }
 
     @Override
-    public void write(byte buf[], int offset, int len)
-            throws IOException {
+    public void write(byte buf[], int offset, int len) throws IOException {
         if (buf == null) {
-            throw new NullPointerException(
-                    lStrings.getString("err.io.nullArray"));
+            throw new NullPointerException(lStrings.getString("err.io.nullArray"));
         }
-
         if (offset < 0 || len < 0 || offset + len > buf.length) {
             String msg = lStrings.getString("err.io.indexOutOfBounds");
             Object[] msgArgs = new Object[3];
@@ -54,7 +48,6 @@ class NoBodyOutputStream extends ServletOutputStream {
             msg = MessageFormat.format(msg, msgArgs);
             throw new IndexOutOfBoundsException(msg);
         }
-
         contentLength += len;
     }
 
@@ -66,4 +59,3 @@ class NoBodyOutputStream extends ServletOutputStream {
     public void setWriteListener(WriteListener writeListener) {
     }
 }
-

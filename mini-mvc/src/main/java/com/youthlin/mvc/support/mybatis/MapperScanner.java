@@ -34,11 +34,6 @@ import java.util.concurrent.ConcurrentHashMap;
 @Resource
 public class MapperScanner {
     private static final Logger LOGGER = LoggerFactory.getLogger(MapperScanner.class);
-    static final String SCAN_ANNOTATION = "mybatis-scan-annotation";
-    static final String SCAN_PACKAGES = "mybatis-scan-packages";
-    static final String CONFIG_FILE = "mybatis-config-file";
-    static final String INIT_SQL = "mybatis-init-sql";
-    static final String INIT_FILE = "mybatis-init-file";
     private Context context;
     private String scanAnnotation = Dao.class.getName();
     private String[] scanPackages = {""};
@@ -98,6 +93,7 @@ public class MapperScanner {
             try (SqlSession sqlSession = factory.openSession();
                  Connection connection = sqlSession.getConnection();
                  Statement statement = connection.createStatement()) {
+                connection.setAutoCommit(false);
                 statement.execute(initSql);
                 connection.commit();
             } catch (SQLException e) {
@@ -112,6 +108,7 @@ public class MapperScanner {
                 Reader sqlFileReader = Resources.getResourceAsReader(initSqlFile);
                 try (SqlSession sqlSession = factory.openSession();
                      Connection connection = sqlSession.getConnection()) {
+                    connection.setAutoCommit(false);
                     // java 执行 sql 脚本的 3 种方式 (ant,ibatis,ScriptRunner)
                     // http://mxm910821.iteye.com/blog/1701822
                     ScriptRunner scriptRunner = new ScriptRunner(connection);

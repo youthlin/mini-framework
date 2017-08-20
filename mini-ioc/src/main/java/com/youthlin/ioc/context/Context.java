@@ -46,6 +46,11 @@ public interface Context {
     Object[] getBeans(Class<?>[] classes);
 
     /**
+     * 获取所有的 Bean
+     */
+    Set<Object> getBeans();
+
+    /**
      * 获取容器中 Bean 的总数
      */
     int getBeanCount();
@@ -59,11 +64,6 @@ public interface Context {
      * 获取类型与 Bean 的对应关系
      */
     Map<Class, Object> getClazzBeanMap();
-
-    /**
-     * 获取所有的 Bean
-     */
-    Set<Object> getBeans();
 
     /**
      * 获取未加载的类名.

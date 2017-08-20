@@ -22,21 +22,19 @@ import java.util.Map;
  */
 @Resource
 public class ThymeleafView implements View {
-    private static final String TH_VIEW_PREFIX = "th-prefix";
-    private static final String TH_VIEW_SUFFIX = "th-suffix";
     private TemplateEngine templateEngine;
 
     private void init(ServletContext servletContext) {
         ServletContextTemplateResolver resolver = new ServletContextTemplateResolver(servletContext);
         resolver.setTemplateMode(TemplateMode.HTML);
-        String prefix = servletContext.getInitParameter(TH_VIEW_PREFIX);
+        String prefix = servletContext.getInitParameter(Constants.TH_VIEW_PREFIX);
         if (prefix == null) {
             prefix = servletContext.getInitParameter(Constants.VIEW_PREFIX_PARAM_NAME);
         }
         if (prefix == null) {
             prefix = "";// /WEB-INF/templates/
         }
-        String suffix = servletContext.getInitParameter(TH_VIEW_SUFFIX);
+        String suffix = servletContext.getInitParameter(Constants.TH_VIEW_SUFFIX);
         if (suffix == null) {
             suffix = servletContext.getInitParameter(Constants.VIEW_SUFFIX_PARAM_NAME);
         }
@@ -52,7 +50,8 @@ public class ThymeleafView implements View {
         templateEngine.setTemplateResolver(resolver);
     }
 
-    @Override public boolean render(HttpServletRequest request, HttpServletResponse response,
+    @Override
+    public boolean render(HttpServletRequest request, HttpServletResponse response,
             Map<String, Object> model, Object result, ControllerAndMethod controllerAndMethod) throws Exception {
         if (templateEngine == null) {
             init(request.getServletContext());
@@ -61,13 +60,13 @@ public class ThymeleafView implements View {
                 || !(result instanceof String)) {
             return false;//不处理 ResponseBody
         }
-
         WebContext ctx = new WebContext(request, response, request.getServletContext(), request.getLocale(), model);
         templateEngine.process((String) result, ctx, response.getWriter());
         return true;
     }
 
-    @Override public int getOrder() {
+    @Override
+    public int getOrder() {
         return 0;
     }
 

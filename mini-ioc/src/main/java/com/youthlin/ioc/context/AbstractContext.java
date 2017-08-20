@@ -25,7 +25,7 @@ public abstract class AbstractContext implements Context {
     private static final Logger LOGGER = LoggerFactory.getLogger(AbstractContext.class);
     protected Map<String, Object> nameBeanMap = new ConcurrentHashMap<>();
     protected Map<Class, Object> clazzBeanMap = new ConcurrentHashMap<>();
-    protected Set<String> unloadedClassName = new HashSet<>();
+    protected Set<String> unloadedClassName = Collections.synchronizedSet(new HashSet<String>());
     protected IAnnotationProcessor processor = new SimpleAnnotationProcessor();
 
     public AbstractContext() {
@@ -33,9 +33,7 @@ public abstract class AbstractContext implements Context {
     }
 
     public AbstractContext(String... scanPackages) {
-        processor.autoScan(this, scanPackages);
-        LOGGER.debug("name  map:{}", getNameBeanMap());
-        LOGGER.debug("class map:{}", getClazzBeanMap());
+        this(null, scanPackages);
     }
 
     public AbstractContext(List<IPreScanner> preScannerList) {
@@ -43,11 +41,13 @@ public abstract class AbstractContext implements Context {
     }
 
     public AbstractContext(List<IPreScanner> preScannerList, String... scanPackages) {
-        for (IPreScanner preScanner : preScannerList) {
-            try {
-                preScanner.preScan(this);
-            } catch (Exception e) {
-                LOGGER.error("PreScanner Error {}", preScanner, e);//不能影响主流程
+        if (preScannerList != null) {
+            for (IPreScanner preScanner : preScannerList) {
+                try {
+                    preScanner.preScan(this);
+                } catch (Exception e) {
+                    LOGGER.error("PreScanner Error {}", preScanner, e);//不能影响主流程
+                }
             }
         }
         processor.autoScan(this, scanPackages);
@@ -55,8 +55,7 @@ public abstract class AbstractContext implements Context {
 
     @Override
     public void registerBean(Object bean) {
-        String name = bean.getClass().getSimpleName();
-        registerBean(bean, name);
+        registerBean(bean, bean.getClass().getSimpleName());
     }
 
     @Override
@@ -115,17 +114,17 @@ public abstract class AbstractContext implements Context {
     }
 
     @Override
-    public int getBeanCount() {
-        return getClazzBeanMap().size();
-    }
-
-    @Override
     public Set<Object> getBeans() {
         Set<Object> set = new HashSet<>();
         for (Map.Entry<Class, Object> entry : getClazzBeanMap().entrySet()) {
             set.add(entry.getValue());
         }
         return set;
+    }
+
+    @Override
+    public int getBeanCount() {
+        return getClazzBeanMap().size();
     }
 
     @Override

@@ -14,7 +14,7 @@ import java.util.Map;
  * 创建：youthlin.chen
  * 时间：2017-08-17 23:55
  */
-@Resource
+@Resource//没有引入jackson的话jsonBodyHandler就会new失败，这个类就不会加入容器
 public class JsonBodyView implements View {
     private static final ResponseBodyHandler jsonBodyHandler = new JsonBodyHandler();
 
