@@ -1,5 +1,6 @@
 Mini-framework
 ==============
+[![Build Status](https://travis-ci.org/YouthLin/mini-framework.svg?branch=master)](https://travis-ci.org/YouthLin/mini-framework)
 [![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.youthlin/mini-framework/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.youthlin/mini-framework)
 
 ```xml
