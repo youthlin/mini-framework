@@ -1,8 +1,12 @@
 package com.youthlin.mvc.servlet;
 
 import com.youthlin.ioc.context.Context;
+import com.youthlin.ioc.exception.BeanInjectException;
+import com.youthlin.mvc.annotation.ConvertWith;
 import com.youthlin.mvc.annotation.HttpMethod;
 import com.youthlin.mvc.annotation.Param;
+import com.youthlin.mvc.converter.Converter;
+import com.youthlin.mvc.converter.SimpleConverter;
 import com.youthlin.mvc.listener.ContextLoaderListener;
 import com.youthlin.mvc.listener.ControllerAndMethod;
 import com.youthlin.mvc.listener.URLAndMethod;
@@ -19,7 +23,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.lang.annotation.Annotation;
-import java.lang.reflect.Method;
+import java.lang.reflect.*;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -166,35 +170,33 @@ public class DispatcherServlet extends HttpServlet {
                 if (param == null) {
                     continue;
                 }
-                String value = getParameter(req, param);
-                if (parameterType.isAssignableFrom(String.class)) {
-                    parameter[i] = getParameter(req, param);
-                } else if (parameterType.isAssignableFrom(double.class) || parameterType.isAssignableFrom(Double.class)) {
-                    parameter[i] = Double.parseDouble(value);
-                } else if (parameterType.isAssignableFrom(float.class) || parameterType.isAssignableFrom(Float.class)) {
-                    parameter[i] = Float.parseFloat(value);
-                } else if (parameterType.isAssignableFrom(long.class) || parameterType.isAssignableFrom(Long.class)) {
-                    parameter[i] = Long.parseLong(value);
-                } else if (parameterType.isAssignableFrom(int.class) || parameterType.isAssignableFrom(Integer.class)) {
-                    parameter[i] = Integer.parseInt(value);
-                } else if (parameterType.isAssignableFrom(short.class) || parameterType.isAssignableFrom(Short.class)) {
-                    parameter[i] = Short.parseShort(value);
-                } else if (parameterType.isAssignableFrom(byte.class) || parameterType.isAssignableFrom(Byte.class)) {
-                    parameter[i] = Byte.parseByte(value);
-                } else if (parameterType.isAssignableFrom(boolean.class) || parameterType.isAssignableFrom(Boolean.class)) {
-                    parameter[i] = Boolean.parseBoolean(value);
-                } else if (parameterType.isAssignableFrom(char.class) || parameterType.isAssignableFrom(Character.class)) {
-                    if (value.length() == 1) {
-                        parameter[i] = value.charAt(0);
-                    } else {
-                        throw new IllegalArgumentException('\"' + value + "\" can not cast to char.");
-                    }
-                } else {
-                    parameter[i] = injectJavaBean(req, parameterType);
+                String value;
+                Object convert;
+                try {
+                    value = getParameter(req, param);
+                } catch (IllegalArgumentException e) {
+                    //这个字段可能是一个 pojo
+                    convert = injectJavaBean(req, parameterType);
+                    parameter[i] = convert;
+                    continue;
                 }
+                convert = getSimpleConverter().convert(value, parameterType);
+                if (convert == null) {
+                    convert = injectJavaBean(req, parameterType);
+                }
+                parameter[i] = convert;
             }
         }
         return parameter;
+    }
+
+    private static SimpleConverter getSimpleConverter() {
+        SimpleConverter converter = getContext().getBean(SimpleConverter.class);
+        if (converter == null) {
+            converter = new SimpleConverter();
+            getContext().registerBean(converter);
+        }
+        return converter;
     }
 
     private Param[] getParams(Method method, Class[] parameterTypes) {
@@ -221,13 +223,13 @@ public class DispatcherServlet extends HttpServlet {
             name = param.value();
         }
         if (name.isEmpty()) {
-            throw new IllegalArgumentException("name of Param should be specified." + param);
+            throw new IllegalArgumentException("name of Param should be specified. " + param);
         }
         String value = request.getParameter(name);
-        if (param.required() && value == null) {
+        if (param.required() && value == null) {//必填项不用管默认值
             throw new IllegalArgumentException("parameter \"" + name + "\" is required.");
         }
-        String defaultValue = param.defaultValue();
+        String defaultValue = param.defaultValue();//非必填项可以有默认值
         if (value == null) {
             value = defaultValue;
         }
@@ -235,7 +237,59 @@ public class DispatcherServlet extends HttpServlet {
     }
 
     private <T> T injectJavaBean(HttpServletRequest request, Class<T> classType) {
-        return null;//todo 支持在方法列表上直接写 POJO
+        T targetObject;
+        //要求有无参构造器
+        try {
+            Constructor<T> constructor = classType.getConstructor();
+            targetObject = constructor.newInstance();
+        } catch (NoSuchMethodException e) {
+            throw new IllegalArgumentException("Class " + classType + " has no default Constructor", e);
+        } catch (IllegalAccessException | InstantiationException | InvocationTargetException e) {
+            throw new BeanInjectException("Can not create instance of " + classType, e);
+        }
+        Field[] fields = classType.getDeclaredFields();
+        for (Field field : fields) {//对每个字段设置值
+            int modifiers = field.getModifiers();
+            if (Modifier.isFinal(modifiers)) {
+                continue;//final 不能设置值
+            }
+            String fieldName = field.getName();
+            String value = request.getParameter(fieldName);
+            if (value == null) {
+                continue;//request 没有对应的值
+            }
+            Converter converter = getSimpleConverter();//默认转换器
+            ConvertWith convertWith = field.getAnnotation(ConvertWith.class);
+            if (convertWith != null) {//自定义转换器
+                Class<? extends Converter> converterClass = convertWith.value();
+                converter = getContext().getBean(converterClass);
+                if (converter == null) {
+                    throw new UnsupportedOperationException(
+                            "Filed " + fieldName + " of Class " + classType.getName()
+                                    + " has `ConvertWith` annotation, but no Converter find: " + converterClass);
+                }
+            }
+            Object convert = converter.convert(value, field.getType());
+            //有 set 方法 优先使用 set 方法设值
+            Method setMethod = null;
+            try {
+                String setMethodName = "set" + fieldName.substring(0, 1).toUpperCase() + fieldName.substring(1);
+                setMethod = classType.getMethod(setMethodName, field.getType());
+                setMethod.invoke(targetObject, convert);
+            } catch (NoSuchMethodException ignore) {
+                try {//没有 set 方法 直接设置
+                    field.setAccessible(true);
+                    field.set(targetObject, convert);
+                } catch (IllegalAccessException e) {
+                    LOGGER.warn("Can not set filed {} of {} from {}(From HttpRequest) {}(after convert)",
+                            fieldName, classType, value, convert, e);
+                }
+            } catch (IllegalAccessException | InvocationTargetException e) {
+                LOGGER.error("Invoke setter method error: {} String value from request: {}, after convert:{}",
+                        setMethod, value, convert, e);
+            }
+        }//for field
+        return targetObject;
     }
 
     // ---------------------------------------------------------------------------------
@@ -359,22 +413,22 @@ public class DispatcherServlet extends HttpServlet {
         }
         String method = req.getMethod();
         switch (method) {
-            case "HEAD":
-                processHead(req, resp);
-                break;
-            case "OPTIONS":
-                processOptions(req, resp);
-                break;
-            case "TRACE":
-                super.doTrace(req, resp);
-                break;
-            case "GET":
-            case "POST":
-            case "PUT":
-            case "PATCH":
-            case "DELETE":
-            default:
-                sendError405(req, resp);
+        case "HEAD":
+            processHead(req, resp);
+            break;
+        case "OPTIONS":
+            processOptions(req, resp);
+            break;
+        case "TRACE":
+            super.doTrace(req, resp);
+            break;
+        case "GET":
+        case "POST":
+        case "PUT":
+        case "PATCH":
+        case "DELETE":
+        default:
+            sendError405(req, resp);
         }
     }
 
@@ -410,11 +464,11 @@ public class DispatcherServlet extends HttpServlet {
 
     private boolean supportHttpMethod(String requestUri, HttpMethod method) {
         switch (method) {
-            case HEAD:
-                return supportHttpMethod(requestUri, HttpMethod.GET);
-            case TRACE:
-            case OPTIONS:
-                return true;
+        case HEAD:
+            return supportHttpMethod(requestUri, HttpMethod.GET);
+        case TRACE:
+        case OPTIONS:
+            return true;
         }
         Map<URLAndMethod, ControllerAndMethod> urlMappingMap = getUrlMappingMap();
         URLAndMethod urlAndMethod = new URLAndMethod(requestUri, method);
