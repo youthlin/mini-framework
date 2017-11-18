@@ -1,6 +1,5 @@
 package com.youthlin.ioc.test.service;
 
-import com.youthlin.ioc.annotaion.Bean;
 import com.youthlin.ioc.test.dao.ICatDao;
 import com.youthlin.ioc.test.dao.IUserDao;
 import com.youthlin.ioc.test.po.Cat;
@@ -9,31 +8,26 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Resource;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 /**
  * 创建： youthlin.chen
  * 时间： 2017-08-10 20:40.
  */
-@Bean
+@Resource
 public class UserService implements IUserService {
     private static final Logger LOGGER = LoggerFactory.getLogger(UserService.class);
-    @Bean
+    @Resource
     private IUserDao userDao;
     @Resource
     private Collection<ICatDao> catDaoList;
     @Resource
     private Set<IUserDao> userDaoSet;
-    @Bean
+    @Resource
     private Map<String, ICatDao> catDaoMap;
     @Resource
     private HashMap<String, ICatDao> catDaoHashMap = new HashMap<>();
-    @Bean
+    @Resource
     private Collection<IUserDao> userDaoList = new LinkedHashSet<>();
 
     @Override public String sayHello(long id) {

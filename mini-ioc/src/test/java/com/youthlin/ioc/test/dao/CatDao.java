@@ -1,8 +1,8 @@
 package com.youthlin.ioc.test.dao;
 
-import com.youthlin.ioc.annotaion.Bean;
 import com.youthlin.ioc.test.po.Cat;
 
+import javax.annotation.Resource;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -10,7 +10,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * 创建： youthlin.chen
  * 时间： 2017-08-10 20:42.
  */
-@Bean
+@Resource
 public class CatDao implements ICatDao {
     private Map<String, Cat> map = new ConcurrentHashMap<>();
 

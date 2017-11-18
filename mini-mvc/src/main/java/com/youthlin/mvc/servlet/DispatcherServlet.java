@@ -16,6 +16,7 @@ import com.youthlin.mvc.support.Ordered;
 import com.youthlin.mvc.support.View;
 import com.youthlin.mvc.util.Java8ParameterNameDiscoverer;
 import com.youthlin.mvc.util.JavaVersion;
+import com.youthlin.mvc.util.ObjectInjectUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -169,7 +170,10 @@ public class DispatcherServlet extends HttpServlet {
                 }
             } else {
                 Param param = params[i];
-                parameter[i] = getParameterValue(req, method, i, parameterType, param, getParameterName(method, param, i));
+                ConvertWith convertWith = getConvertWith(method, i);
+                String parameterName = getParameterName(method, param, i);
+                parameter[i] = ObjectInjectUtil
+                        .injectFromRequest(req, parameterType, parameterName, param, convertWith);
             }
         }
         return parameter;
@@ -193,10 +197,20 @@ public class DispatcherServlet extends HttpServlet {
         return params;
     }
 
+    private ConvertWith getConvertWith(Method method, int index) {
+        Annotation[][] parameterAnnotations = method.getParameterAnnotations();
+        for (Annotation annotation : parameterAnnotations[index]) {
+            if (annotation instanceof ConvertWith) {
+                return (ConvertWith) annotation;
+            }
+        }
+        return null;
+    }
+
     /**
-     * 优先使用 {@link Param} 注解获取参数名，如果没有注解，尝试使用 Java8 反射获取参数名，否则使用 arg1, arg2... 作为参数名
+     * 优先使用 {@link Param} 注解获取参数名，如果没有注解，尝试使用 Java8 反射获取参数名，否则使用 arg0, arg1... 作为参数名
      */
-    private String getParameterName(Method method, Param param, int index) {
+    private static String getParameterName(Method method, Param param, int index) {
         if (param != null) {//有注解
             String name = param.name();
             if (name.isEmpty()) {
@@ -208,7 +222,8 @@ public class DispatcherServlet extends HttpServlet {
             return name;
         }
         if (JavaVersion.supportJava8()) {
-            Java8ParameterNameDiscoverer java8ParameterNameDiscoverer = getContext().getBean(Java8ParameterNameDiscoverer.class);
+            Java8ParameterNameDiscoverer java8ParameterNameDiscoverer = getContext()
+                    .getBean(Java8ParameterNameDiscoverer.class);
             if (java8ParameterNameDiscoverer == null) {
                 java8ParameterNameDiscoverer = new Java8ParameterNameDiscoverer();
                 getContext().registerBean(java8ParameterNameDiscoverer);
@@ -216,184 +231,7 @@ public class DispatcherServlet extends HttpServlet {
             String[] parameterNames = java8ParameterNameDiscoverer.getParameterNames(method);
             return parameterNames[index];
         }
-        return "arg" + (index + 1);
-    }
-
-    /**
-     * 获取 Controller 参数的值
-     * 若 request 里直接有这个参数, 直接转换
-     * 否则:
-     * - 认为这个参数是个 Pojo, 对其每个字段注入值;
-     * - 注入字段时, 若 request 有字段名字, 直接转换,
-     * - - 否则再次注入 pojo, 拼上 filedName.innerFiledName 查找请求参数
-     * <pre>
-     *     // id; name
-     *     public String hello(int id, String name){}
-     * ---------------------------------------------------------------
-     *     public class User{
-     *         int id;
-     *         String name;
-     *     }
-     *     //id; user.id; user.name
-     *     public String hello(int id, User user){}
-     * ---------------------------------------------------------------
-     *
-     *     ;@Resource
-     *     public class MyConverter implements Converter{
-     *         public User convert(String str, User.class){
-     *             return JsonUtil.from(str, User.class);
-     *         }
-     *     }
-     *     //id="1"; user="{id=1,name='xxx'}"
-     *     public String hello(int id, @ConvertWith(MyConverter.class) User user){}
-     *   ---------------------------------------------------------------
-     *
-     *     public class User{
-     *         int id;
-     *         ;@ConverterWith(CatConverter.class) Cat cat;
-     *     }
-     *     //id=1; user.id=1, user.cat="xxx"
-     *     public String hello(int id, User user){}
-     * </pre>
-     *
-     * @param request 请求
-     * @param method  Controller 的方法
-     * @param index   第几个参数
-     * @param type    参数的类型
-     * @param param   参数的注解 可能为 null
-     * @param name    注解参数给这个参数的名称; param==null 时, 是参数本身的名称(Java8)或 arg1, arg2...
-     * @return 这个参数的值, 可能为 null
-     * @throws IllegalArgumentException 如果有 Param 注解, 且是必填项, 但值为 null 则抛出异常
-     */
-    private Object getParameterValue(HttpServletRequest request, Method method,
-            int index, Class<?> type, Param param, String name) {
-        Object result = null;
-        ConvertWith convertWith = getConvertWith(method, index);
-        Converter converter = null;
-        if (convertWith != null) {
-            converter = getConverter(convertWith, type);
-        }
-
-        String stringValue = request.getParameter(name);
-        if (stringValue != null) {//request 有这个参数 直接转换
-            return convert(stringValue, converter, type);
-        }
-
-        //request 没有这个参数 一层层构造
-        try {
-            Constructor<?> constructor = type.getConstructor();
-            result = constructor.newInstance();
-            Field[] fields = type.getDeclaredFields();
-            for (Field field : fields) {
-                injectFiled(type, result, field, name, request);
-            }
-        } catch (NoSuchMethodException e) {
-            LOGGER.warn("Class {} has no default Constructor", type, e);
-        } catch (IllegalAccessException | InstantiationException | InvocationTargetException e) {
-            LOGGER.warn("Can not create instance of {}", type, e);
-        }
-
-        if (result == null) {
-            if (param.required()) {
-                throw new IllegalArgumentException(name + " is required");
-            }
-            String defaultValue = param.defaultValue();
-            return convert(defaultValue, converter, type);
-        }
-        return result;
-    }
-
-    private void injectFiled(Class<?> classType, Object targetObject, Field field, String prefix,
-            HttpServletRequest request) {
-        int modifiers = field.getModifiers();
-        if (Modifier.isFinal(modifiers)) {
-            return;//final 不能设置值
-        }
-        String fieldName = field.getName();
-        String value = request.getParameter(prefix + "." + fieldName);
-        Class<?> fieldType = field.getType();
-        if (value == null) {
-            //todo
-            return;//request 没有对应的值
-        }
-        Converter converter = getSimpleConverter();//默认转换器
-        ConvertWith convertWith = field.getAnnotation(ConvertWith.class);
-        if (convertWith != null) {//自定义转换器
-            converter = getConverter(convertWith, field);
-        }
-        Object converted = convert(value, converter, fieldType);
-        //有 set 方法 优先使用 set 方法设值
-        Method setMethod = null;
-        try {
-            String setMethodName = "set" + fieldName.substring(0, 1).toUpperCase() + fieldName.substring(1);
-            setMethod = classType.getMethod(setMethodName, fieldType);
-            setMethod.invoke(targetObject, converted);
-        } catch (NoSuchMethodException ignore) {
-            try {//没有 set 方法 直接设置
-                field.setAccessible(true);
-                field.set(targetObject, converted);
-            } catch (IllegalAccessException e) {
-                LOGGER.warn("Can not set filed {} of {} from {}(From HttpRequest) {}(after convert)",
-                        fieldName, classType, value, converted, e);
-            }
-        } catch (IllegalAccessException | InvocationTargetException e) {
-            LOGGER.error("Invoke setter method error: {} String value from request: {}, after convert:{}",
-                    setMethod, value, converted, e);
-        }
-    }
-
-    private Object convert(String str, Converter converter, Class<?> type) {
-        if (converter != null) {
-            return converter.convert(str, type);
-        }
-        return getSimpleConverter().convert(str, type);
-    }
-
-
-    private ConvertWith getConvertWith(Method method, int index) {
-        Annotation[][] parameterAnnotations = method.getParameterAnnotations();
-        for (Annotation annotation : parameterAnnotations[index]) {
-            if (annotation instanceof ConvertWith) {
-                return (ConvertWith) annotation;
-            }
-        }
-        return null;
-    }
-
-    private Converter getConverter(ConvertWith convertWith, AnnotatedElement annotatedElement) {
-        Class<? extends Converter> converterClass = convertWith.value();
-        Converter converter = getContext().getBean(converterClass);
-        if (converter == null) {
-            throw new UnsupportedOperationException("Converter not found: " + converterClass + " (" + annotatedElement + ')');
-        }
-        return converter;
-    }
-
-    private static SimpleConverter getSimpleConverter() {
-        SimpleConverter converter = getContext().getBean(SimpleConverter.class);
-        if (converter == null) {
-            converter = new SimpleConverter();
-            getContext().registerBean(converter);
-        }
-        return converter;
-    }
-
-    private <T> T injectJavaBean(HttpServletRequest request, Class<T> classType) {
-        T targetObject;
-        //要求有无参构造器
-        try {
-            Constructor<T> constructor = classType.getConstructor();
-            targetObject = constructor.newInstance();
-        } catch (NoSuchMethodException e) {
-            throw new IllegalArgumentException("Class " + classType + " has no default Constructor", e);
-        } catch (IllegalAccessException | InstantiationException | InvocationTargetException e) {
-            throw new BeanInjectException("Can not create instance of " + classType, e);
-        }
-        Field[] fields = classType.getDeclaredFields();
-        for (Field field : fields) {//对每个字段设置值
-
-        }//for field
-        return targetObject;
+        return "arg" + index;
     }
 
     // ---------------------------------------------------------------------------------
@@ -517,22 +355,22 @@ public class DispatcherServlet extends HttpServlet {
         }
         String method = req.getMethod();
         switch (method) {
-            case "HEAD":
-                processHead(req, resp);
-                break;
-            case "OPTIONS":
-                processOptions(req, resp);
-                break;
-            case "TRACE":
-                super.doTrace(req, resp);
-                break;
-            case "GET":
-            case "POST":
-            case "PUT":
-            case "PATCH":
-            case "DELETE":
-            default:
-                sendError405(req, resp);
+        case "HEAD":
+            processHead(req, resp);
+            break;
+        case "OPTIONS":
+            processOptions(req, resp);
+            break;
+        case "TRACE":
+            super.doTrace(req, resp);
+            break;
+        case "GET":
+        case "POST":
+        case "PUT":
+        case "PATCH":
+        case "DELETE":
+        default:
+            sendError405(req, resp);
         }
     }
 
@@ -568,11 +406,11 @@ public class DispatcherServlet extends HttpServlet {
 
     private boolean supportHttpMethod(String requestUri, HttpMethod method) {
         switch (method) {
-            case HEAD:
-                return supportHttpMethod(requestUri, HttpMethod.GET);
-            case TRACE:
-            case OPTIONS:
-                return true;
+        case HEAD:
+            return supportHttpMethod(requestUri, HttpMethod.GET);
+        case TRACE:
+        case OPTIONS:
+            return true;
         }
         Map<URLAndMethod, ControllerAndMethod> urlMappingMap = getUrlMappingMap();
         URLAndMethod urlAndMethod = new URLAndMethod(requestUri, method);

@@ -3,22 +3,43 @@ package com.youthlin.mvc.converter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.annotation.Resource;
+import java.lang.reflect.Array;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Modifier;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * 创建: youthlin.chen
  * 时间: 2017-11-17 23:11
  */
-@Resource
-public class SimpleConverter implements Converter {
+public class SimpleConverter<T> implements Converter<T> {
     private static final Logger LOGGER = LoggerFactory.getLogger(SimpleConverter.class);
+    private static final Map<Class, SimpleConverter> instanceMap = new HashMap<>();
 
-    @SuppressWarnings("unchecked")
+    public static <T> SimpleConverter<T> newInstance(Class<T> clazz) {
+        @SuppressWarnings("unchecked")
+        SimpleConverter<T> simpleConverter = (SimpleConverter<T>) instanceMap.get(clazz);
+        if (simpleConverter == null) {
+            simpleConverter = new SimpleConverter<>(clazz);
+            instanceMap.put(clazz, simpleConverter);
+        }
+        return simpleConverter;
+    }
+
+    private Class<T> clazz;
+
+    private SimpleConverter(Class<T> clazz) {
+        this.clazz = clazz;
+    }
+
     @Override
-    public <T> T convert(String from, Class<T> clazz) {
+    @SuppressWarnings("unchecked")
+    public T convert(String from) {
+        if (clazz.isArray()) {
+            return (T) Array.newInstance(clazz, 0);//todo
+        }
         if (clazz.isAssignableFrom(String.class)) {
             return (T) from;
         } else if (clazz.isAssignableFrom(double.class) || clazz.isAssignableFrom(Double.class)) {

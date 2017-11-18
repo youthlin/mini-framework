@@ -74,9 +74,8 @@ public class SimpleAnnotationProcessor implements IAnnotationProcessor {
                 LOGGER.trace("skip register annotation {}", aClass);
                 return;
             }
-            Bean beanAnnotation = AnnotationUtil.getAnnotation(aClass, Bean.class);
             Resource annotation = AnnotationUtil.getAnnotation(aClass, Resource.class);
-            if (beanAnnotation != null || annotation != null) {
+            if (annotation != null) {
                 String name = AnnotationUtil.getAnnotationName(aClass);
                 if (shouldNewInstance(aClass)) {
                     Object o = aClass.newInstance();
@@ -125,9 +124,8 @@ public class SimpleAnnotationProcessor implements IAnnotationProcessor {
         Field[] fields = objClass.getDeclaredFields();
         if (fields != null) {
             for (Field field : fields) {
-                Bean beanAnnotation = field.getAnnotation(Bean.class);
                 Resource resourceAnnotation = field.getAnnotation(Resource.class);
-                if (beanAnnotation != null || resourceAnnotation != null) {
+                if (resourceAnnotation != null) {
                     Object filedValue;
                     String name = AnnotationUtil.getAnnotationName(field);
                     if (!name.isEmpty()) {//如果有名称，使用名称查找 Bean
@@ -138,13 +136,8 @@ public class SimpleAnnotationProcessor implements IAnnotationProcessor {
                     if (filedValue == null) {
                         throw new NoSuchBeanException(name);
                     }
-                    try {
-                        field.setAccessible(true);
-                        field.set(object, filedValue);
-                        LOGGER.debug("inject field [ {} ] with value [ {} ] to [ {} ]", field, filedValue, object);
-                    } catch (IllegalAccessException e) {
-                        LOGGER.warn("Can not access field {}, class: {}", field, objClass, e);
-                        throw new BeanInjectException("Can not inject field " + field + " to class " + objClass, e);
+                    if (!AnnotationUtil.setFiledValue(object, field, filedValue)) {
+                        throw new BeanInjectException("Can not inject field " + field + " to class " + objClass);
                     }
                 }
 
@@ -195,6 +188,14 @@ public class SimpleAnnotationProcessor implements IAnnotationProcessor {
     //支持通过 setter 方法注入
     protected void injectMethod(Context context, Object object) {
         //todo 请你实现
+        Class<?> clazz = object.getClass();
+        Method[] methods = clazz.getDeclaredMethods();
+        for (Method method : methods) {
+            Resource resource = AnnotationUtil.getAnnotation(method, Resource.class);
+            if (resource != null) {
+
+            }
+        }
     }
 
     protected void afterInjected(Context context) {
@@ -213,9 +214,9 @@ public class SimpleAnnotationProcessor implements IAnnotationProcessor {
                         method.setAccessible(true);
                         method.invoke(bean, parameters);
                     } catch (ReflectiveOperationException e) {
-                        LOGGER.error("Error occurs when invoke PostConstruct method {} of bean {}", method, bean);
+                        LOGGER.error("Error occurs when invoke PostConstruct method {} of bean {}", method, bean, e);
                     }
-                    break;//bean should have more than one PostConstruct
+                    break;//bean should not have more than one PostConstruct
                 }
             }
         }

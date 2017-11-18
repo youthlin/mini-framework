@@ -9,11 +9,7 @@ import java.io.File;
 import java.io.FileFilter;
 import java.io.IOException;
 import java.lang.annotation.Annotation;
-import java.lang.reflect.AnnotatedElement;
-import java.lang.reflect.Field;
-import java.lang.reflect.Method;
-import java.lang.reflect.ParameterizedType;
-import java.lang.reflect.Type;
+import java.lang.reflect.*;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.ArrayList;
@@ -88,14 +84,14 @@ public class AnnotationUtil {
         LOGGER.debug("scan url = {}", url);
         String protocol = url.getProtocol();
         switch (protocol) {
-            case "file":
-                classNames.addAll(getClassNamesFromFileSystem(basePackage, url));
-                break;
-            case "jar":
-                classNames.addAll(getClassNamesFromJar(basePackage, url));
-                break;
-            default:
-                LOGGER.warn("unknown protocol. [{}]", protocol);
+        case "file":
+            classNames.addAll(getClassNamesFromFileSystem(basePackage, url));
+            break;
+        case "jar":
+            classNames.addAll(getClassNamesFromJar(basePackage, url));
+            break;
+        default:
+            LOGGER.warn("unknown protocol. [{}]", protocol);
         }
         return classNames;
     }
@@ -176,12 +172,9 @@ public class AnnotationUtil {
      * @return 如果注解定义了名称，直接返回；否则返回空字符串
      */
     static String getAnnotationName(Field field) {
-        Bean bean = getAnnotation(field, Bean.class);
         Resource resource = getAnnotation(field, Resource.class);
         String name = "";
-        if (bean != null) {
-            name = bean.value();
-        } else if (resource != null) {
+        if (resource != null) {
             name = resource.name();
         }
         return name;
@@ -299,17 +292,11 @@ public class AnnotationUtil {
      * @throws IllegalArgumentException 当类没有被注解时
      */
     static String getAnnotationName(Class<?> clazz) {
-        Bean beanAnnotation = AnnotationUtil.getAnnotation(clazz, Bean.class);
         Resource resourceAnnotation = AnnotationUtil.getAnnotation(clazz, Resource.class);
-        if (beanAnnotation == null && resourceAnnotation == null) {
-            throw new IllegalArgumentException("No @Bean or @Resource annotation at this object.");
+        if (resourceAnnotation == null) {
+            throw new IllegalArgumentException("No @Resource annotation at this object.");
         }
-        String name;
-        if (beanAnnotation != null) {
-            name = (String) getValue(clazz, beanAnnotation);
-        } else {
-            name = (String) getValue(clazz, resourceAnnotation, "name");
-        }
+        String name = (String) getValue(clazz, resourceAnnotation, "name");
         if (name == null || name.isEmpty()) {
             name = clazz.getSimpleName();
         }
@@ -332,6 +319,30 @@ public class AnnotationUtil {
             }
         }
         return null;
+    }
+
+    public static boolean setFiledValue(Object targetObject, Field field, Object value) {
+        String fieldName = field.getName();
+        Class<?> classType = targetObject.getClass();
+        Class<?> fieldType = field.getType();
+        Method setMethod = null;
+        try {
+            String setMethodName = "set" + fieldName.substring(0, 1).toUpperCase() + fieldName.substring(1);
+            setMethod = classType.getMethod(setMethodName, fieldType);
+            setMethod.invoke(targetObject, value);
+        } catch (NoSuchMethodException ignore) {
+            try {//没有 set 方法 直接设置
+                field.setAccessible(true);
+                field.set(targetObject, value);
+            } catch (IllegalAccessException e) {
+                LOGGER.warn("Can not set filed {} of {} from {}", fieldName, classType, value, e);
+                return false;
+            }
+        } catch (IllegalAccessException | InvocationTargetException e) {
+            LOGGER.error("Invoke setter method error: {} value: {}", setMethod, value, e);
+            return false;
+        }
+        return true;
     }
 
     /**

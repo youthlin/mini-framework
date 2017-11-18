@@ -25,7 +25,8 @@ import java.lang.annotation.Target;
  * 创建： youthlin.chen
  * 时间： 2017-08-10 19:29.
  */
-@Target({ElementType.TYPE, ElementType.FIELD, ElementType.METHOD, ElementType.PARAMETER})
+@Deprecated
+@Target({ ElementType.TYPE, ElementType.FIELD, ElementType.METHOD, ElementType.PARAMETER })
 @Retention(RetentionPolicy.RUNTIME)
 public @interface Bean {
     String value() default "";
