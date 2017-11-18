@@ -45,7 +45,6 @@ public class SimpleAnnotationProcessor implements IAnnotationProcessor {
         for (Map.Entry<Class, Object> entry : context.getClazzBeanMap().entrySet()) {
             Object obj = entry.getValue();
             injectFiled(context, obj);
-            injectMethod(context, obj);
         }
         afterInjected(context);
         // PostConstruct
@@ -183,19 +182,6 @@ public class SimpleAnnotationProcessor implements IAnnotationProcessor {
             }
         }
         return filedValue;
-    }
-
-    //支持通过 setter 方法注入
-    protected void injectMethod(Context context, Object object) {
-        //todo 请你实现
-        Class<?> clazz = object.getClass();
-        Method[] methods = clazz.getDeclaredMethods();
-        for (Method method : methods) {
-            Resource resource = AnnotationUtil.getAnnotation(method, Resource.class);
-            if (resource != null) {
-
-            }
-        }
     }
 
     protected void afterInjected(Context context) {
