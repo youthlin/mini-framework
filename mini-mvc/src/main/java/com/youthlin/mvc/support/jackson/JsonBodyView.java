@@ -1,6 +1,6 @@
 package com.youthlin.mvc.support.jackson;
 
-import com.youthlin.ioc.annotaion.AnnotationUtil;
+import com.youthlin.ioc.annotation.AnnotationUtil;
 import com.youthlin.mvc.listener.ControllerAndMethod;
 import com.youthlin.mvc.support.ResponseBodyHandler;
 import com.youthlin.mvc.support.View;

@@ -1,4 +1,4 @@
-package com.youthlin.ioc.annotaion;
+package com.youthlin.ioc.annotation;
 
 import javax.annotation.Resource;
 import java.lang.annotation.ElementType;
@@ -8,11 +8,11 @@ import java.lang.annotation.Target;
 
 /**
  * 创建： youthlin.chen
- * 时间： 2017-08-13 13:41.
+ * 时间： 2017-08-13 14:28.
  */
 @Resource
 @Target({ ElementType.TYPE })
 @Retention(RetentionPolicy.RUNTIME)
-public @interface Controller {
+public @interface Service {
     String value() default "";
 }

@@ -41,7 +41,7 @@ public class PreScannerForMyBatis implements IPreScanner {
         if (scanAnnotation != null) {
             mapperScanner.setScanAnnotation(scanAnnotation);
         }
-        String[] scanPackagesArr = {""};
+        String[] scanPackagesArr = { "" };
         if (scanPackagesStr != null) {
             scanPackagesArr = scanPackagesStr.split("\\s|,|;");
         }

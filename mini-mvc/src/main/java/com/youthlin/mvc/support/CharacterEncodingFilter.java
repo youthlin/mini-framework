@@ -14,7 +14,7 @@ import java.io.IOException;
  * 创建： youthlin.chen
  * 时间： 2017-08-18 16:46.
  */
-@SuppressWarnings({"WeakerAccess", "unused"})
+@SuppressWarnings({ "WeakerAccess", "unused" })
 public class CharacterEncodingFilter implements Filter {
     private String encoding = "UTF-8";
     private boolean forceRequestEncoding = true;

@@ -1,4 +1,4 @@
-package com.youthlin.ioc.annotaion;
+package com.youthlin.ioc.annotation;
 
 import com.youthlin.ioc.exception.NoSuchBeanException;
 import org.slf4j.Logger;
@@ -9,7 +9,12 @@ import java.io.File;
 import java.io.FileFilter;
 import java.io.IOException;
 import java.lang.annotation.Annotation;
-import java.lang.reflect.*;
+import java.lang.reflect.AnnotatedElement;
+import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.ArrayList;
@@ -286,7 +291,7 @@ public class AnnotationUtil {
     }
 
     /**
-     * 获取注解(Bean/Controller/Service/Dao/Resource)中定义的名称.
+     * 获取注解(/Controller/Service/Dao/Resource)中定义的名称.
      *
      * @return 如果注解定义了名称，返回名称，否则返回类名
      * @throws IllegalArgumentException 当类没有被注解时

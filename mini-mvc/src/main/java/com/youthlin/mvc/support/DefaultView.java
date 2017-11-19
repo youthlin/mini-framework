@@ -1,12 +1,11 @@
 package com.youthlin.mvc.support;
 
-import com.youthlin.ioc.annotaion.AnnotationUtil;
+import com.youthlin.ioc.annotation.AnnotationUtil;
 import com.youthlin.ioc.context.Context;
 import com.youthlin.mvc.annotation.ResponseBody;
 import com.youthlin.mvc.listener.ContextLoaderListener;
 import com.youthlin.mvc.listener.ControllerAndMethod;
 import com.youthlin.mvc.servlet.Constants;
-import com.youthlin.mvc.servlet.DispatcherServlet;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -51,7 +50,8 @@ public class DefaultView implements View {
                 String suffix = (String) req.getServletContext().getAttribute(Constants.VIEW_SUFFIX);
                 req.getRequestDispatcher(prefix + result + suffix).forward(req, resp);
             } else {
-                throw new RuntimeException("You can only return String value when there is no @ResponseBody on method.");
+                throw new RuntimeException(
+                        "You can only return String value when there is no @ResponseBody on method.");
             }
         }
         return true;

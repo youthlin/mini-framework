@@ -1,7 +1,7 @@
 package com.youthlin.mvc.support.mybatis;
 
-import com.youthlin.ioc.annotaion.AnnotationUtil;
-import com.youthlin.ioc.annotaion.Dao;
+import com.youthlin.ioc.annotation.AnnotationUtil;
+import com.youthlin.ioc.annotation.Dao;
 import com.youthlin.ioc.context.Context;
 import org.apache.ibatis.exceptions.PersistenceException;
 import org.apache.ibatis.io.Resources;
@@ -21,7 +21,6 @@ import java.lang.annotation.Annotation;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -30,13 +29,13 @@ import java.util.concurrent.ConcurrentHashMap;
  * 创建： youthlin.chen
  * 时间： 2017-08-18 18:07.
  */
-@SuppressWarnings({"WeakerAccess", "UnusedReturnValue"})
+@SuppressWarnings({ "WeakerAccess", "UnusedReturnValue" })
 @Resource
 public class MapperScanner {
     private static final Logger LOGGER = LoggerFactory.getLogger(MapperScanner.class);
     private Context context;
     private String scanAnnotation = Dao.class.getName();
-    private String[] scanPackages = {""};
+    private String[] scanPackages = { "" };
     private String configFile = "mybatis/config.xml";
     private String initSql;
     private String initSqlFile;
@@ -91,8 +90,8 @@ public class MapperScanner {
     private void initSql() {
         if (initSql != null && !initSql.isEmpty()) {
             try (SqlSession sqlSession = factory.openSession();
-                 Connection connection = sqlSession.getConnection();
-                 Statement statement = connection.createStatement()) {
+                    Connection connection = sqlSession.getConnection();
+                    Statement statement = connection.createStatement()) {
                 connection.setAutoCommit(false);
                 statement.execute(initSql);
                 connection.commit();
@@ -107,7 +106,7 @@ public class MapperScanner {
             try {
                 Reader sqlFileReader = Resources.getResourceAsReader(initSqlFile);
                 try (SqlSession sqlSession = factory.openSession();
-                     Connection connection = sqlSession.getConnection()) {
+                        Connection connection = sqlSession.getConnection()) {
                     connection.setAutoCommit(false);
                     // java 执行 sql 脚本的 3 种方式 (ant,ibatis,ScriptRunner)
                     // http://mxm910821.iteye.com/blog/1701822

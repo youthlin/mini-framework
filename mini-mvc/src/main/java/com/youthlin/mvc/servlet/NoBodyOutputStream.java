@@ -51,7 +51,6 @@ class NoBodyOutputStream extends ServletOutputStream {
         contentLength += len;
     }
 
-
     public boolean isReady() {
         return false;
     }

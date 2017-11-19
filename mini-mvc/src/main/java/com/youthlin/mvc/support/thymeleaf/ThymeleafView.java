@@ -1,6 +1,6 @@
 package com.youthlin.mvc.support.thymeleaf;
 
-import com.youthlin.ioc.annotaion.AnnotationUtil;
+import com.youthlin.ioc.annotation.AnnotationUtil;
 import com.youthlin.mvc.annotation.ResponseBody;
 import com.youthlin.mvc.listener.ControllerAndMethod;
 import com.youthlin.mvc.servlet.Constants;

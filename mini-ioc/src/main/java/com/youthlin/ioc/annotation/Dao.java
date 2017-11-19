@@ -1,4 +1,4 @@
-package com.youthlin.ioc.annotaion;
+package com.youthlin.ioc.annotation;
 
 import javax.annotation.Resource;
 import java.lang.annotation.ElementType;

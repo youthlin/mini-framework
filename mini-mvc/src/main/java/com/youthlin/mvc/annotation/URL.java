@@ -10,7 +10,7 @@ import java.lang.annotation.Target;
  * 创建： youthlin.chen
  * 时间： 2017-08-13 13:42.
  */
-@Target({ElementType.TYPE, ElementType.METHOD})
+@Target({ ElementType.TYPE, ElementType.METHOD })
 @Retention(RetentionPolicy.RUNTIME)
 public @interface URL {
     String[] value() default {};

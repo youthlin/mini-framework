@@ -1,4 +1,4 @@
-package com.youthlin.ioc.annotaion;
+package com.youthlin.ioc.annotation;
 
 import com.youthlin.ioc.context.Context;
 import com.youthlin.ioc.exception.BeanDefinitionException;

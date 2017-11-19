@@ -2,8 +2,6 @@ package com.youthlin.mvc.listener;
 
 import com.youthlin.mvc.annotation.HttpMethod;
 
-import java.util.Arrays;
-
 /**
  * 创建： youthlin.chen
  * 时间： 2017-08-13 16:03.
@@ -16,6 +14,7 @@ public class URLAndMethod {
     public URLAndMethod(String url) {
         this(url, null);//for all methods: GET\POST\PUT\...etc
     }
+
     public URLAndMethod(String url, HttpMethod httpMethod) {
         this.url = url;
         this.httpMethod = httpMethod;
@@ -23,12 +22,15 @@ public class URLAndMethod {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        if (this == o)
+            return true;
+        if (o == null || getClass() != o.getClass())
+            return false;
 
         URLAndMethod that = (URLAndMethod) o;
 
-        if (url != null ? !url.equals(that.url) : that.url != null) return false;
+        if (url != null ? !url.equals(that.url) : that.url != null)
+            return false;
         return httpMethod == that.httpMethod;
     }
 
