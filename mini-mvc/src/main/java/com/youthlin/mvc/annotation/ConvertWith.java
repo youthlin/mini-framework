@@ -1,6 +1,6 @@
 package com.youthlin.mvc.annotation;
 
-import com.youthlin.mvc.converter.Converter;
+import com.youthlin.mvc.support.converter.Converter;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;

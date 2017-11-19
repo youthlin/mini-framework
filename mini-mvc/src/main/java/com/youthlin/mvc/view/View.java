@@ -1,6 +1,7 @@
-package com.youthlin.mvc.support;
+package com.youthlin.mvc.view;
 
 import com.youthlin.mvc.listener.ControllerAndMethod;
+import com.youthlin.mvc.support.Ordered;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;

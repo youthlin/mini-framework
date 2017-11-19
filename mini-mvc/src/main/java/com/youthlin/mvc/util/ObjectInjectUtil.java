@@ -3,17 +3,27 @@ package com.youthlin.mvc.util;
 import com.youthlin.ioc.annotation.AnnotationUtil;
 import com.youthlin.mvc.annotation.ConvertWith;
 import com.youthlin.mvc.annotation.Param;
-import com.youthlin.mvc.converter.Converter;
-import com.youthlin.mvc.converter.SimpleConverter;
+import com.youthlin.mvc.support.converter.Converter;
+import com.youthlin.mvc.support.converter.SimpleConverter;
+import org.objectweb.asm.ClassReader;
+import org.objectweb.asm.Type;
+import org.objectweb.asm.tree.ClassNode;
+import org.objectweb.asm.tree.LocalVariableNode;
+import org.objectweb.asm.tree.MethodNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.servlet.http.HttpServletRequest;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
 import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Set;
 
 import static com.youthlin.mvc.servlet.DispatcherServlet.getContext;
@@ -24,6 +34,22 @@ import static com.youthlin.mvc.servlet.DispatcherServlet.getContext;
  */
 public class ObjectInjectUtil {
     private static final Logger LOGGER = LoggerFactory.getLogger(ObjectInjectUtil.class);
+
+    public static Object injectFromRequestBody(HttpServletRequest request, ConvertWith convertWith,
+            Class<?> parameterType) {
+        Converter converter = getConverter(convertWith, parameterType);
+        try {
+            BufferedReader reader = request.getReader();
+            StringBuilder sb = new StringBuilder();
+            int temp;
+            while ((temp = reader.read()) != -1) {
+                sb.append((char) temp);
+            }
+            return convert(sb.toString(), converter, parameterType);
+        } catch (IOException e) {
+            throw new IllegalArgumentException("Can not read request body", e);
+        }
+    }
 
     /**
      * 获取 Controller 参数的值
@@ -182,4 +208,60 @@ public class ObjectInjectUtil {
         return converter;
     }
 
+    /**
+     * Returns a list containing one parameter name for each argument accepted
+     * by the given constructor. If the class was compiled with debugging
+     * symbols, the parameter names will match those provided in the Java source
+     * code. Otherwise, a generic "arg" parameter name is generated ("arg0" for
+     * the first argument, "arg1" for the second...).
+     * <p>
+     * This method relies on the constructor's class loader to locate the
+     * bytecode resource that defined its class.
+     *
+     * @link https://github.com/danidemi/poc-attribute-names-with-java-and-asm/blob/master/src/main/java/com/danidemi/poc/ArgumentReflection.java
+     */
+    public static String[] getParameterNames(Method theMethod) throws IOException {
+        Class<?> declaringClass = theMethod.getDeclaringClass();
+        ClassLoader declaringClassLoader = declaringClass.getClassLoader();
+
+        Type declaringType = Type.getType(declaringClass);
+        String constructorDescriptor = Type.getMethodDescriptor(theMethod);
+        String url = declaringType.getInternalName() + ".class";
+
+        InputStream classFileInputStream = declaringClassLoader.getResourceAsStream(url);
+        if (classFileInputStream == null) {
+            throw new IllegalArgumentException(
+                    "The constructor's class loader cannot find the bytecode that defined the constructor's class (URL: "
+                            + url + ")");
+        }
+
+        ClassNode classNode;
+        try {
+            classNode = new ClassNode();
+            ClassReader classReader = new ClassReader(classFileInputStream);
+            classReader.accept(classNode, 0);
+        } finally {
+            classFileInputStream.close();
+        }
+
+        @SuppressWarnings("unchecked")
+        List<MethodNode> methods = classNode.methods;
+        for (MethodNode method : methods) {
+            if (method.name.equals(theMethod.getName()) && method.desc.equals(constructorDescriptor)) {
+                Type[] argumentTypes = Type.getArgumentTypes(method.desc);
+                String[] parameterNames = new String[argumentTypes.length];
+
+                @SuppressWarnings("unchecked")
+                List<LocalVariableNode> localVariables = method.localVariables;
+                for (int i = 1; i <= argumentTypes.length; i++) {
+                    // The first local variable actually represents the "this"
+                    // object if the method is not static!
+                    parameterNames[i - 1] = (localVariables.get(i).name);
+                }
+
+                return parameterNames;
+            }
+        }
+        return null;
+    }
 }

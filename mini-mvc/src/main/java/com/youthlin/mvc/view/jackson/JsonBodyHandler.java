@@ -1,9 +1,9 @@
-package com.youthlin.mvc.support.jackson;
+package com.youthlin.mvc.view.jackson;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.youthlin.ioc.annotation.AnnotationUtil;
-import com.youthlin.mvc.support.ResponseBodyHandler;
+import com.youthlin.mvc.view.ResponseBodyHandler;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;

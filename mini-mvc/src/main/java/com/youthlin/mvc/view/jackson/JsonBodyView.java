@@ -1,9 +1,9 @@
-package com.youthlin.mvc.support.jackson;
+package com.youthlin.mvc.view.jackson;
 
 import com.youthlin.ioc.annotation.AnnotationUtil;
 import com.youthlin.mvc.listener.ControllerAndMethod;
-import com.youthlin.mvc.support.ResponseBodyHandler;
-import com.youthlin.mvc.support.View;
+import com.youthlin.mvc.view.ResponseBodyHandler;
+import com.youthlin.mvc.view.View;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;

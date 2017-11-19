@@ -4,13 +4,15 @@ import com.youthlin.ioc.context.Context;
 import com.youthlin.mvc.annotation.ConvertWith;
 import com.youthlin.mvc.annotation.HttpMethod;
 import com.youthlin.mvc.annotation.Param;
+import com.youthlin.mvc.annotation.RequestBody;
 import com.youthlin.mvc.listener.ContextLoaderListener;
 import com.youthlin.mvc.listener.ControllerAndMethod;
 import com.youthlin.mvc.listener.URLAndMethod;
-import com.youthlin.mvc.support.DefaultView;
-import com.youthlin.mvc.support.Interceptor;
+import com.youthlin.mvc.view.DefaultView;
+import com.youthlin.mvc.servlet.filter.Interceptor;
 import com.youthlin.mvc.support.Ordered;
-import com.youthlin.mvc.support.View;
+import com.youthlin.mvc.view.View;
+import com.youthlin.mvc.util.Constants;
 import com.youthlin.mvc.util.Java8ParameterNameDiscoverer;
 import com.youthlin.mvc.util.JavaVersion;
 import com.youthlin.mvc.util.ObjectInjectUtil;
@@ -23,6 +25,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.lang.annotation.Annotation;
+import java.lang.reflect.Array;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -144,8 +147,11 @@ public class DispatcherServlet extends HttpServlet {
     private Object[] injectParameter(HttpServletRequest req, HttpServletResponse resp, Method method) {
         Class<?>[] parameterTypes = method.getParameterTypes();//每个参数的类型
         //每个参数的 Param 注解 如果第零个参数没有 Param 注解 那么 params[0] 为 null
-        Param[] params = getParams(method, parameterTypes);
         Object[] parameter = new Object[parameterTypes.length];//调用方法的实参
+        ConvertWith[] convertWiths = getParameterAnnotations(method, ConvertWith.class);
+        RequestBody[] requestBodies = getParameterAnnotations(method, RequestBody.class);
+        int requestBodyCount = 0;
+        Param[] params = getParameterAnnotations(method, Param.class);
         for (int i = 0; i < parameterTypes.length; i++) {
             Class<?> parameterType = parameterTypes[i];
             if (parameterType.isAssignableFrom(HttpServletRequest.class)) {
@@ -166,42 +172,38 @@ public class DispatcherServlet extends HttpServlet {
                     }
                 }
             } else {
-                Param param = params[i];
-                ConvertWith convertWith = getConvertWith(method, i);
-                String parameterName = getParameterName(method, param, i);
-                parameter[i] = ObjectInjectUtil
-                        .injectFromRequest(req, parameterType, parameterName, param, convertWith);
+                ConvertWith convertWith = convertWiths[i];
+                RequestBody requestBody = requestBodies[i];
+                if (requestBody != null) {
+                    if (requestBodyCount++ > 0) {
+                        throw new UnsupportedOperationException("No more than one @RequestBody");
+                    }
+                    parameter[i] = ObjectInjectUtil.injectFromRequestBody(req, convertWith, parameterType);
+                } else {
+                    Param param = params[i];
+                    String parameterName = getParameterName(method, param, i);
+                    parameter[i] = ObjectInjectUtil
+                            .injectFromRequest(req, parameterType, parameterName, param, convertWith);
+                }
             }
         }
         return parameter;
     }
 
-    private Param[] getParams(Method method, Class[] parameterTypes) {
-        Param[] params = new Param[parameterTypes.length];
+    @SuppressWarnings("unchecked")
+    private <T extends Annotation> T[] getParameterAnnotations(Method method, Class<T> annotationType) {
         Annotation[][] parameterAnnotations = method.getParameterAnnotations();
-        if (LOGGER.isTraceEnabled()) {
-            LOGGER.trace("method {} parameterAnnotations: {}", method, Arrays.deepToString(parameterAnnotations));
-        }
+        T[] result = (T[]) Array.newInstance(annotationType, parameterAnnotations.length);
         for (int i = 0; i < parameterAnnotations.length; i++) {
-            Annotation[] parameterAnnotation = parameterAnnotations[i];
-            for (Annotation annotation : parameterAnnotation) {
-                if (annotation instanceof Param) {
-                    params[i] = (Param) annotation;
+            Annotation[] annotations = parameterAnnotations[i];
+            for (Annotation annotation : annotations) {
+                if (annotationType.isInstance(annotation)) {
+                    result[i] = (T) annotation;
                     break;
                 }
             }
         }
-        return params;
-    }
-
-    private ConvertWith getConvertWith(Method method, int index) {
-        Annotation[][] parameterAnnotations = method.getParameterAnnotations();
-        for (Annotation annotation : parameterAnnotations[index]) {
-            if (annotation instanceof ConvertWith) {
-                return (ConvertWith) annotation;
-            }
-        }
-        return null;
+        return result;
     }
 
     /**
@@ -218,6 +220,15 @@ public class DispatcherServlet extends HttpServlet {
             }
             return name;
         }
+        String[] parameterNames = null;
+        try {
+            parameterNames = ObjectInjectUtil.getParameterNames(method);
+        } catch (IOException e) {
+            LOGGER.warn("Can not get method parameter name", e);
+        }
+        if (parameterNames != null) {
+            return parameterNames[index];
+        }
         if (JavaVersion.supportJava8()) {
             Java8ParameterNameDiscoverer java8ParameterNameDiscoverer = getContext()
                     .getBean(Java8ParameterNameDiscoverer.class);
@@ -225,7 +236,7 @@ public class DispatcherServlet extends HttpServlet {
                 java8ParameterNameDiscoverer = new Java8ParameterNameDiscoverer();
                 getContext().registerBean(java8ParameterNameDiscoverer);
             }
-            String[] parameterNames = java8ParameterNameDiscoverer.getParameterNames(method);
+            parameterNames = java8ParameterNameDiscoverer.getParameterNames(method);
             return parameterNames[index];
         }
         return "arg" + index;

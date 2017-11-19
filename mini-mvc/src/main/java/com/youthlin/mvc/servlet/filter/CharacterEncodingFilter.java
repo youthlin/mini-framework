@@ -1,4 +1,4 @@
-package com.youthlin.mvc.support;
+package com.youthlin.mvc.servlet.filter;
 
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;

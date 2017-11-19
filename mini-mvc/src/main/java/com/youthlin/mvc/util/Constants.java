@@ -1,4 +1,4 @@
-package com.youthlin.mvc.servlet;
+package com.youthlin.mvc.util;
 
 /**
  * 创建：youthlin.chen

@@ -7,7 +7,7 @@ import com.youthlin.ioc.context.Context;
 import com.youthlin.ioc.spi.IPreScanner;
 import com.youthlin.mvc.annotation.HttpMethod;
 import com.youthlin.mvc.annotation.URL;
-import com.youthlin.mvc.servlet.Constants;
+import com.youthlin.mvc.util.Constants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

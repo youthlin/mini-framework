@@ -1,4 +1,4 @@
-package com.youthlin.mvc.support;
+package com.youthlin.mvc.view;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;

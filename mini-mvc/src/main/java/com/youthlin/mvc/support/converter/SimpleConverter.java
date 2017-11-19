@@ -1,5 +1,6 @@
-package com.youthlin.mvc.converter;
+package com.youthlin.mvc.support.converter;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -17,6 +18,17 @@ import java.util.Map;
 public class SimpleConverter<T> implements Converter<T> {
     private static final Logger LOGGER = LoggerFactory.getLogger(SimpleConverter.class);
     private static final Map<Class, SimpleConverter> instanceMap = new HashMap<>();
+    private static final Object OBJECT_MAPPER;
+
+    static {
+        Object t = null;
+        try {
+            t = new ObjectMapper();
+        } catch (Throwable ignore) {
+            LOGGER.warn("Jackson Object Mapper is not available.");
+        }
+        OBJECT_MAPPER = t;
+    }
 
     public static <T> SimpleConverter<T> newInstance(Class<T> clazz) {
         @SuppressWarnings("unchecked")
@@ -37,9 +49,6 @@ public class SimpleConverter<T> implements Converter<T> {
     @Override
     @SuppressWarnings("unchecked")
     public T convert(String from) {
-        if (clazz.isArray()) {
-            return (T) Array.newInstance(clazz, 0);//todo
-        }
         if (clazz.isAssignableFrom(String.class)) {
             return (T) from;
         } else if (clazz.isAssignableFrom(double.class) || clazz.isAssignableFrom(Double.class)) {
@@ -63,6 +72,14 @@ public class SimpleConverter<T> implements Converter<T> {
                 throw new ClassCastException('\"' + from + "\" can not cast to char.");
             }
         } else {
+            if (canReadJson()) {
+                return fromJson(from);
+            }
+            if (clazz.isArray()) {
+                //return (T) Array.newInstance(clazz, 0);
+                throw new UnsupportedOperationException(
+                        "Array is not supported: No @ConvertWith found, and Jackson is not available");
+            }
             try {
                 //new BigDecimal(String)
                 Constructor<T> constructor = clazz.getConstructor(String.class);
@@ -76,6 +93,19 @@ public class SimpleConverter<T> implements Converter<T> {
 
         }
         LOGGER.warn("Can not convert to type: {} from String value: {}", clazz, from);
+        return null;
+    }
+
+    private boolean canReadJson() {
+        return OBJECT_MAPPER != null;
+    }
+
+    private T fromJson(String json) {
+        try {
+            return ((ObjectMapper) OBJECT_MAPPER).readValue(json, clazz);
+        } catch (Exception e) {
+            LOGGER.warn("Can not read json for type {} : {}", clazz, json, e);
+        }
         return null;
     }
 

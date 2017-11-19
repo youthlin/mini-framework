@@ -1,10 +1,10 @@
-package com.youthlin.mvc.support.thymeleaf;
+package com.youthlin.mvc.view.thymeleaf;
 
 import com.youthlin.ioc.annotation.AnnotationUtil;
 import com.youthlin.mvc.annotation.ResponseBody;
 import com.youthlin.mvc.listener.ControllerAndMethod;
-import com.youthlin.mvc.servlet.Constants;
-import com.youthlin.mvc.support.View;
+import com.youthlin.mvc.util.Constants;
+import com.youthlin.mvc.view.View;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.WebContext;
 import org.thymeleaf.templatemode.TemplateMode;
