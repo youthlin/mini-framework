@@ -100,8 +100,8 @@ public class SimpleConverter<T> implements Converter<T> {
             return ((ObjectMapper) OBJECT_MAPPER).readValue(json, clazz);
         } catch (Exception e) {
             LOGGER.warn("Can not read json for type {} : {}", clazz, json, e);
+            throw new IllegalArgumentException("Can not convert request body to " + clazz + ": " + json, e);
         }
-        return null;
     }
 
     protected T doConvert(String from) {
