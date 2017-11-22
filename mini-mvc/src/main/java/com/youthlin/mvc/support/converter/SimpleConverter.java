@@ -4,7 +4,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.lang.reflect.Array;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Modifier;
@@ -15,10 +14,11 @@ import java.util.Map;
  * 创建: youthlin.chen
  * 时间: 2017-11-17 23:11
  */
+@SuppressWarnings("WeakerAccess")
 public class SimpleConverter<T> implements Converter<T> {
     private static final Logger LOGGER = LoggerFactory.getLogger(SimpleConverter.class);
-    private static final Map<Class, SimpleConverter> instanceMap = new HashMap<>();
-    private static final Object OBJECT_MAPPER;
+    protected static final Map<Class, SimpleConverter> INSTANCE_MAP = new HashMap<>();
+    protected static final Object OBJECT_MAPPER;
 
     static {
         Object t = null;
@@ -30,19 +30,19 @@ public class SimpleConverter<T> implements Converter<T> {
         OBJECT_MAPPER = t;
     }
 
-    public static <T> SimpleConverter<T> newInstance(Class<T> clazz) {
+    public static <T> SimpleConverter<T> getInstance(Class<T> clazz) {
         @SuppressWarnings("unchecked")
-        SimpleConverter<T> simpleConverter = (SimpleConverter<T>) instanceMap.get(clazz);
+        SimpleConverter<T> simpleConverter = (SimpleConverter<T>) INSTANCE_MAP.get(clazz);
         if (simpleConverter == null) {
             simpleConverter = new SimpleConverter<>(clazz);
-            instanceMap.put(clazz, simpleConverter);
+            INSTANCE_MAP.put(clazz, simpleConverter);
         }
         return simpleConverter;
     }
 
     private Class<T> clazz;
 
-    private SimpleConverter(Class<T> clazz) {
+    protected SimpleConverter(Class<T> clazz) {
         this.clazz = clazz;
     }
 
@@ -75,11 +75,6 @@ public class SimpleConverter<T> implements Converter<T> {
             if (canReadJson()) {
                 return fromJson(from);
             }
-            if (clazz.isArray()) {
-                //return (T) Array.newInstance(clazz, 0);
-                throw new UnsupportedOperationException(
-                        "Array is not supported: No @ConvertWith found, and Jackson is not available");
-            }
             try {
                 //new BigDecimal(String)
                 Constructor<T> constructor = clazz.getConstructor(String.class);
@@ -93,7 +88,7 @@ public class SimpleConverter<T> implements Converter<T> {
 
         }
         LOGGER.warn("Can not convert to type: {} from String value: {}", clazz, from);
-        return null;
+        return doConvert(from);
     }
 
     private boolean canReadJson() {
@@ -105,6 +100,15 @@ public class SimpleConverter<T> implements Converter<T> {
             return ((ObjectMapper) OBJECT_MAPPER).readValue(json, clazz);
         } catch (Exception e) {
             LOGGER.warn("Can not read json for type {} : {}", clazz, json, e);
+        }
+        return null;
+    }
+
+    protected T doConvert(String from) {
+        if (clazz.isArray()) {
+            //return (T) Array.newInstance(clazz, 0);
+            throw new UnsupportedOperationException(
+                    "Array is not supported: No @ConvertWith found, and Jackson is not available");
         }
         return null;
     }
