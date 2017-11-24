@@ -13,6 +13,7 @@ import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.net.URISyntaxException;
@@ -183,6 +184,29 @@ public class AnnotationUtil {
             name = resource.name();
         }
         return name;
+    }
+
+    public static Class<?> forName(String className) {
+        try {
+            return Class.forName(className);
+        } catch (ClassNotFoundException ignore) {
+            return null;
+        }
+    }
+
+    public static Object newInstance(Class<?> clazz) {
+        try {
+            if (shouldNewInstance(clazz)) {
+                return clazz.newInstance();
+            }
+        } catch (ReflectiveOperationException ignore) {
+        }
+        return null;
+    }
+
+    static boolean shouldNewInstance(Class c) {
+        int modifiers = c.getModifiers();
+        return !Modifier.isInterface(modifiers) && !Modifier.isAbstract(modifiers);
     }
 
     /**

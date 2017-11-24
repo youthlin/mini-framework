@@ -93,8 +93,7 @@ public class SimpleAnnotationProcessor implements IAnnotationProcessor {
     }
 
     protected boolean shouldNewInstance(Class c) {
-        int modifiers = c.getModifiers();
-        return !Modifier.isInterface(modifiers) && !Modifier.isAbstract(modifiers);
+        return AnnotationUtil.shouldNewInstance(c);
     }
 
     protected void afterRegister(Context context) {
