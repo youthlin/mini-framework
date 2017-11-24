@@ -74,4 +74,6 @@ public interface Context {
     Set<String> getUnloadedClass();
 
     boolean addUnloadedClass(String className);
+
+    String[] getScanPackages();
 }

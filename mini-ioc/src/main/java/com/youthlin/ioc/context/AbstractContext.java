@@ -5,12 +5,14 @@ import com.youthlin.ioc.annotation.IAnnotationProcessor;
 import com.youthlin.ioc.annotation.SimpleAnnotationProcessor;
 import com.youthlin.ioc.exception.BeanDefinitionException;
 import com.youthlin.ioc.exception.NoSuchBeanException;
+import com.youthlin.ioc.spi.IPostScanner;
 import com.youthlin.ioc.spi.IPreScanner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -23,6 +25,7 @@ import java.util.concurrent.ConcurrentHashMap;
 @SuppressWarnings("WeakerAccess")
 public abstract class AbstractContext implements Context {
     private static final Logger LOGGER = LoggerFactory.getLogger(AbstractContext.class);
+    protected String[] scanPackages;
     protected Map<String, Object> nameBeanMap = new ConcurrentHashMap<>();
     protected Map<Class, Object> clazzBeanMap = new ConcurrentHashMap<>();
     protected Set<String> unloadedClassName = Collections.synchronizedSet(new HashSet<String>());
@@ -41,16 +44,47 @@ public abstract class AbstractContext implements Context {
     }
 
     public AbstractContext(List<IPreScanner> preScannerList, String... scanPackages) {
-        if (preScannerList != null) {
-            for (IPreScanner preScanner : preScannerList) {
+        this(preScannerList, null, scanPackages);
+    }
+
+    public AbstractContext(List<IPreScanner> preScannerList, List<IPostScanner> postScannerList,
+            String... scanPackages) {
+        Iterator<IPreScanner> preScannerIterator = preScannerList == null ? null : preScannerList.iterator();
+        Iterator<IPostScanner> postScannerIterator = postScannerList == null ? null : postScannerList.iterator();
+        init(preScannerIterator, postScannerIterator, scanPackages);
+    }
+
+    public AbstractContext(Iterator<IPreScanner> preScannerIterator, Iterator<IPostScanner> postScannerIterator,
+            String... scanPackages) {
+        init(preScannerIterator, postScannerIterator, scanPackages);
+    }
+
+    private void init(Iterator<IPreScanner> preScannerIterator, Iterator<IPostScanner> postScannerIterator,
+            String... scanPackages) {
+        this.scanPackages = scanPackages;
+        if (preScannerIterator != null) {
+            while (preScannerIterator.hasNext()) {
+                IPreScanner preScanner = preScannerIterator.next();
                 try {
                     preScanner.preScan(this);
-                } catch (Exception e) {
+                } catch (Throwable e) {
                     LOGGER.error("PreScanner Error {}", preScanner, e);//不能影响主流程
                 }
             }
         }
+
         processor.autoScan(this, scanPackages);
+
+        if (postScannerIterator != null) {
+            while (postScannerIterator.hasNext()) {
+                IPostScanner postScanner = postScannerIterator.next();
+                try {
+                    postScanner.postScanner(this);
+                } catch (Throwable e) {
+                    LOGGER.error("PostScanner Error {}", postScanner, e);//不能影响主流程
+                }
+            }
+        }
     }
 
     @Override
@@ -145,6 +179,11 @@ public abstract class AbstractContext implements Context {
     @Override
     public boolean addUnloadedClass(String className) {
         return unloadedClassName.add(className);
+    }
+
+    @Override
+    public String[] getScanPackages() {
+        return scanPackages;
     }
 
     protected AbstractContext setNameBeanMap(Map<String, Object> nameBeanMap) {

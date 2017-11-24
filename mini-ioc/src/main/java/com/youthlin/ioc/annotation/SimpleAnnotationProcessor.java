@@ -98,7 +98,7 @@ public class SimpleAnnotationProcessor implements IAnnotationProcessor {
     }
 
     protected void afterRegister(Context context) {
-
+        LOGGER.debug("register beans: {}", context.getBeanCount());
     }
 
     /**
@@ -123,7 +123,7 @@ public class SimpleAnnotationProcessor implements IAnnotationProcessor {
         Field[] fields = objClass.getDeclaredFields();
         if (fields != null) {
             for (Field field : fields) {
-                Resource resourceAnnotation = field.getAnnotation(Resource.class);
+                Resource resourceAnnotation = AnnotationUtil.getAnnotation(field, Resource.class);
                 if (resourceAnnotation != null) {
                     Object filedValue;
                     String name = AnnotationUtil.getAnnotationName(field);
@@ -154,13 +154,13 @@ public class SimpleAnnotationProcessor implements IAnnotationProcessor {
         } catch (IllegalAccessException ignore) {
         }
         if (filedValue != null) {
-            //集合类可能已经初始化 @Bean private Map<String, IUserDao> userDaoMap = new HashMap<>();
+            //集合类可能已经初始化 @Resource private Map<String, IUserDao> userDaoMap = new HashMap<>();
             if (Collection.class.isAssignableFrom(type)) {//这个字段可以强制转换为 Collection
                 ((Collection) filedValue).addAll(AnnotationUtil.getBeans(context.getClazzBeanMap(),
                         AnnotationUtil.getGenericClass(field, 0)));
             } else if (Map.class.isAssignableFrom(type)) {//这个字段可以强制转换为 Map
-                ((Map) filedValue).putAll(AnnotationUtil.getBeansMap(context.getClazzBeanMap(),
-                        AnnotationUtil.getGenericClass(field, 1)));
+                ((Map) filedValue).putAll(AnnotationUtil
+                        .getBeansMap(context.getClazzBeanMap(), AnnotationUtil.getGenericClass(field, 1)));
             } else {
                 LOGGER.warn("{}, {}", field, filedValue);
                 throw new BeanInjectException("this field already has a value but also has @Bean.");
@@ -185,7 +185,7 @@ public class SimpleAnnotationProcessor implements IAnnotationProcessor {
     }
 
     protected void afterInjected(Context context) {
-
+        LOGGER.debug("{} Beans inited.", context.getBeanCount());
     }
 
     protected void postConstruct(Context context, Object bean) {
@@ -209,6 +209,6 @@ public class SimpleAnnotationProcessor implements IAnnotationProcessor {
     }
 
     protected void done(Context context) {
-
+        LOGGER.debug("scan done. unloaded class: {}", context.getUnloadedClass().size());
     }
 }

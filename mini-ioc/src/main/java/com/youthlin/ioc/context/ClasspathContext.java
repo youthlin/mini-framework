@@ -1,7 +1,9 @@
 package com.youthlin.ioc.context;
 
+import com.youthlin.ioc.spi.IPostScanner;
 import com.youthlin.ioc.spi.IPreScanner;
 
+import java.util.Iterator;
 import java.util.List;
 
 /**
@@ -22,7 +24,17 @@ public class ClasspathContext extends AbstractContext {
     }
 
     public ClasspathContext(List<IPreScanner> preScannerList, String... scanPackages) {
-        super(preScannerList, scanPackages);
+        this(preScannerList, null, scanPackages);
+    }
+
+    public ClasspathContext(List<IPreScanner> preScannerList, List<IPostScanner> postScannerList,
+            String... scanPackages) {
+        super(preScannerList, postScannerList, scanPackages);
+    }
+
+    public ClasspathContext(Iterator<IPreScanner> preScannerIterator, Iterator<IPostScanner> postScannerIterator,
+            String... scanPackages) {
+        super(preScannerIterator, postScannerIterator, scanPackages);
     }
 
 }
