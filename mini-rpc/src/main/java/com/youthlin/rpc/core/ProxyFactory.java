@@ -12,6 +12,6 @@ import java.lang.reflect.InvocationHandler;
  * 创建: youthlin.chen
  * 时间: 2017-11-26 14:44
  */
-public interface ProxyFactory extends InvocationHandler {
+public interface ProxyFactory {
     <T> T newProxy(Class<T> interfaceType, RegistryConfig registryConfig, ConsumerConfig consumerConfig);
 }

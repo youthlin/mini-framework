@@ -1,6 +1,6 @@
 package com.youthlin.rpc.annotation;
 
-import com.youthlin.rpc.core.config.NotConfig;
+import com.youthlin.rpc.core.config.NoConfig;
 import com.youthlin.rpc.core.config.RegistryConfig;
 import com.youthlin.rpc.core.config.ServiceConfig;
 
@@ -18,17 +18,17 @@ import java.lang.annotation.Target;
  * 时间: 2017-11-26 14:37
  */
 @Resource
-@Target({ElementType.TYPE, ElementType.FIELD})
+@Target({ ElementType.TYPE, ElementType.FIELD })
 @Retention(RetentionPolicy.RUNTIME)
 public @interface Rpc {
     /**
-     * 注册中心
+     * 注册中配置
      */
-    Class<? extends RegistryConfig> registry() default NotConfig.class;
+    Class<? extends RegistryConfig> registry() default NoConfig.class;
 
     /**
      * 配置这个服务的相关信息
      */
-    Class<? extends ServiceConfig> config() default NotConfig.class;
+    Class<? extends ServiceConfig> config() default NoConfig.class;
 
 }

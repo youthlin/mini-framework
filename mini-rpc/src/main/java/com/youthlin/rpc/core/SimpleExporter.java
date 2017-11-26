@@ -144,7 +144,7 @@ public class SimpleExporter implements Exporter {
         Object instance = instanceMap.get(invokeInterface);
         Class<?> instanceClass = instance.getClass();
         Method[] methods = instanceClass.getMethods();
-        AbstractInvocationAdapter result = AbstractInvocationAdapter.newInvocation();
+        SimpleInvocation result = SimpleInvocation.newInvocation();
         result.setUid(invocation.uid());
         boolean found = false;
         try {

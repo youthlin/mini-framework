@@ -1,6 +1,7 @@
 package com.youthlin.rpc.core.config;
 
 import com.youthlin.rpc.core.Registry;
+import com.youthlin.rpc.core.SimpleRegistry;
 import com.youthlin.rpc.util.NetUtil;
 
 /**
@@ -11,22 +12,22 @@ import com.youthlin.rpc.util.NetUtil;
 public class SimpleRegistryConfig extends AbstractConfig implements RegistryConfig {
     @Override
     public String name() {
-        return NetUtil.LOCALHOST;
+        return NetUtil.getLocalAddress().getHostName();
     }
 
     @Override
     public Class<? extends Registry> impl() {
-        return null;
+        return SimpleRegistry.class;
     }
 
     @Override
     public String host() {
-        return NetUtil.LOCALHOST_IP;
+        return NetUtil.getLocalAddress().getHostAddress();
     }
 
     @Override
     public int port() {
-        return NetUtil.getAvailablePort(NetUtil.DEFAULT_REGISTRY_PORT);
+        return NetUtil.getAvailablePort(NetUtil.DEFAULT_PROVIDER_PORT);
     }
 
 }

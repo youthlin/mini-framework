@@ -7,7 +7,8 @@ import java.util.UUID;
  * 创建: youthlin.chen
  * 时间: 2017-11-26 16:44
  */
-public abstract class AbstractInvocationAdapter implements Invocation {
+@SuppressWarnings({ "UnusedReturnValue", "WeakerAccess" })
+public class SimpleInvocation implements Invocation {
     private String uid = UUID.randomUUID().toString();
     private Class<?> invokeInterface;
     private Class<?> returnType;
@@ -17,18 +18,17 @@ public abstract class AbstractInvocationAdapter implements Invocation {
     private Object value;
     private Throwable exception;
 
-    public static AbstractInvocationAdapter newInvocation() {
-        return new Holder();
+    public static SimpleInvocation newInvocation() {
+        return new SimpleInvocation();
     }
 
-    private static class Holder extends AbstractInvocationAdapter {
+    private SimpleInvocation() {
     }
 
     @Override
     public String uid() {
         return uid;
     }
-
 
     @Override
     public Class<?> invokeInterface() {
@@ -65,50 +65,49 @@ public abstract class AbstractInvocationAdapter implements Invocation {
         return exception;
     }
 
-    public AbstractInvocationAdapter setUid(String uid) {
+    public SimpleInvocation setUid(String uid) {
         this.uid = uid;
         return this;
     }
 
-
-    public AbstractInvocationAdapter setInvokeInterface(Class<?> invokeInterface) {
+    public SimpleInvocation setInvokeInterface(Class<?> invokeInterface) {
         this.invokeInterface = invokeInterface;
         return this;
     }
 
-    public AbstractInvocationAdapter setReturnType(Class<?> returnType) {
+    public SimpleInvocation setReturnType(Class<?> returnType) {
         this.returnType = returnType;
         return this;
     }
 
-    public AbstractInvocationAdapter setMethodName(String methodName) {
+    public SimpleInvocation setMethodName(String methodName) {
         this.methodName = methodName;
         return this;
     }
 
-    public AbstractInvocationAdapter setArgsType(Class<?>[] argsType) {
+    public SimpleInvocation setArgsType(Class<?>[] argsType) {
         this.argsType = argsType;
         return this;
     }
 
-    public AbstractInvocationAdapter setArgs(Object[] args) {
+    public SimpleInvocation setArgs(Object[] args) {
         this.args = args;
         return this;
     }
 
-    public AbstractInvocationAdapter setValue(Object value) {
+    public SimpleInvocation setValue(Object value) {
         this.value = value;
         return this;
     }
 
-    public AbstractInvocationAdapter setException(Throwable exception) {
+    public SimpleInvocation setException(Throwable exception) {
         this.exception = exception;
         return this;
     }
 
     @Override
     public String toString() {
-        return "AbstractInvocationAdapter{" +
+        return "SimpleInvocation{" +
                 "uid='" + uid + '\'' +
                 ", invokeInterface=" + invokeInterface +
                 ", returnType=" + returnType +

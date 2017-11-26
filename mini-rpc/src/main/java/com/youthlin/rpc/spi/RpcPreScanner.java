@@ -4,15 +4,14 @@ import com.youthlin.ioc.annotation.AnnotationUtil;
 import com.youthlin.ioc.context.Context;
 import com.youthlin.ioc.spi.IPreScanner;
 import com.youthlin.rpc.annotation.Rpc;
-import com.youthlin.rpc.core.Exporter;
 import com.youthlin.rpc.core.ProxyFactory;
-import com.youthlin.rpc.core.Registry;
+import com.youthlin.rpc.core.SimpleProxyFactory;
 import com.youthlin.rpc.core.config.ConsumerConfig;
-import com.youthlin.rpc.core.config.NotConfig;
-import com.youthlin.rpc.core.config.ProviderConfig;
+import com.youthlin.rpc.core.config.NoConfig;
 import com.youthlin.rpc.core.config.RegistryConfig;
 import com.youthlin.rpc.core.config.ServiceConfig;
-import com.youthlin.rpc.core.config.SimpleProviderConfig;
+import com.youthlin.rpc.core.config.SimpleConsumerConfig;
+import com.youthlin.rpc.core.config.SimpleRegistryConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,7 +42,7 @@ public class RpcPreScanner implements IPreScanner {
                     if (rpc == null) {
                         continue;
                     }
-                    process(context, field, rpc);
+                    process(context, field, rpc);//找到 @Rpc 的字段
                 }
             }
         } catch (Throwable t) {
@@ -52,27 +51,36 @@ public class RpcPreScanner implements IPreScanner {
     }
 
     private void process(Context context, Field field, Rpc rpc) throws InstantiationException, IllegalAccessException {
-        Class<?> interfaceType = field.getDeclaringClass();
+        Class<?> interfaceType = field.getType();
         if (!interfaceType.isInterface()) {
             throw new IllegalArgumentException("@Rpc Field should be an interface. " + interfaceType);
         }
-        Class<? extends RegistryConfig> registryConfigClass = rpc.registry();
-        Class<? extends ServiceConfig> configClass = rpc.config();
-        if (!ConsumerConfig.class.isAssignableFrom(configClass)) {
-            throw new IllegalArgumentException("config of @Rpc Field should be sub class of ConsumerConfig. " + configClass);
-        }
-        ServiceConfig serviceConfig = newInstance(configClass);
-        ConsumerConfig consumerConfig = ConsumerConfig.class.cast(serviceConfig);
-        ProxyFactory proxyFactory = newInstance(consumerConfig.proxy());
 
-        RegistryConfig registryConfig = null;
-        if (!registryConfigClass.equals(NotConfig.class)) {
-            if (!AnnotationUtil.shouldNewInstance(registryConfigClass)) {
-                throw new IllegalArgumentException("");
+        ProxyFactory proxyFactory;
+        ConsumerConfig consumerConfig;
+        Class<? extends ServiceConfig> configClass = rpc.config();
+        if (configClass.equals(NoConfig.class)) {
+            proxyFactory = new SimpleProxyFactory();
+            consumerConfig = new SimpleConsumerConfig();
+        } else {
+            if (!ConsumerConfig.class.isAssignableFrom(configClass)) {
+                throw new IllegalArgumentException(
+                        "config of @Rpc Field should be sub class of ConsumerConfig. " + configClass);
             }
+            ServiceConfig serviceConfig = newInstance(configClass);
+            consumerConfig = ConsumerConfig.class.cast(serviceConfig);
+            proxyFactory = newInstance(consumerConfig.proxy());
+        }
+        Class<? extends RegistryConfig> registryConfigClass = rpc.registry();
+        RegistryConfig registryConfig;
+        if (registryConfigClass.equals(NoConfig.class)) {
+            registryConfig = new SimpleRegistryConfig();
+        } else {
             registryConfig = newInstance(registryConfigClass);
         }
         Object newProxy = proxyFactory.newProxy(interfaceType, registryConfig, consumerConfig);
+
+        //注册到容器 扫描完注入字段时就能注入成功
         context.registerBean(newProxy);
     }
 

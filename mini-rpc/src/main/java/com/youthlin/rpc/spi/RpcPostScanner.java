@@ -6,7 +6,7 @@ import com.youthlin.ioc.spi.IPostScanner;
 import com.youthlin.rpc.annotation.Rpc;
 import com.youthlin.rpc.core.Exporter;
 import com.youthlin.rpc.core.Registry;
-import com.youthlin.rpc.core.config.NotConfig;
+import com.youthlin.rpc.core.config.NoConfig;
 import com.youthlin.rpc.core.config.ProviderConfig;
 import com.youthlin.rpc.core.config.RegistryConfig;
 import com.youthlin.rpc.core.config.ServiceConfig;
@@ -15,10 +15,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Map;
-import java.util.Set;
 
 /**
- * 在容器扫描完成后, 对 @Rpc 的类注册到注册中心.
+ * 在容器扫描完成后, 对 @Rpc 的类暴露服务并注册到注册中心.
  * 创建: youthlin.chen
  * 时间: 2017-11-26 14:39
  */
@@ -37,26 +36,27 @@ public class RpcPostScanner implements IPostScanner {
                     continue;
                 }
 
-                Class<? extends RegistryConfig> registry = rpc.registry();
                 Class<? extends ServiceConfig> config = rpc.config();
-
-                if (!ProviderConfig.class.isAssignableFrom(config)) {
-                    LOGGER.warn("Service config should be a sub class of ProviderConfig on Provider Side. {}", rpc);
-                    throw new IllegalArgumentException("Service config should be a sub class of ProviderConfig on Provider Side. " + rpc);
-                }
-
                 ProviderConfig providerConfig;
-                if (config.equals(NotConfig.class)) {
+                if (config.equals(NoConfig.class)) {//没有配置
                     providerConfig = new SimpleProviderConfig();
                 } else {
+                    if (!ProviderConfig.class.isAssignableFrom(config)) {
+                        LOGGER.warn("Service config should be a sub class of ProviderConfig on Provider Side. {}", rpc);
+                        throw new IllegalArgumentException(
+                                "Service config should be a sub class of ProviderConfig on Provider Side. " + rpc);
+                    }
                     ServiceConfig serviceConfig = getFromContextOrNewInstance(context, config);
                     providerConfig = ProviderConfig.class.cast(serviceConfig);
                 }
 
-                if (!registry.equals(NotConfig.class)) {
+                Class<? extends RegistryConfig> registry = rpc.registry();
+                if (registry.equals(NoConfig.class)) {//没有配置
+                } else {
                     RegistryConfig registryConfig = getFromContextOrNewInstance(context, registry);
                     Class<? extends Registry> registryImplClass = registryConfig.impl();
                     Registry registryImpl = getFromContextOrNewInstance(context, registryImplClass);
+                    registryImpl.setConfig(registryConfig);
                     registryImpl.register(providerConfig, instance);
                 }
 
