@@ -15,6 +15,7 @@
     <modules>
         <module>mini-ioc</module>
         <module>mini-mvc</module>
+        <module>mini-rpc</module>
     </modules>
 
     <properties>

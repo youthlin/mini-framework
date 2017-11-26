@@ -4,6 +4,7 @@ import com.youthlin.ioc.annotation.AnnotationUtil;
 import com.youthlin.ioc.annotation.Controller;
 import com.youthlin.ioc.context.ClasspathContext;
 import com.youthlin.ioc.context.Context;
+import com.youthlin.ioc.spi.IPostScanner;
 import com.youthlin.ioc.spi.IPreScanner;
 import com.youthlin.mvc.annotation.HttpMethod;
 import com.youthlin.mvc.annotation.URL;
@@ -68,11 +69,12 @@ public class ContextLoaderListener implements ServletContextListener {
             LOGGER.info("find initParameter: name = {}, value = {}", parameterName, initParameterValue);
         }
         String scan = servletContext.getInitParameter("scan");
-        String[] scanPackages = { "" };
+        String[] scanPackages = {""};
         if (scan != null) {
             scanPackages = scan.split("\\s|,|;");
         }
         ServiceLoader<IPreScanner> preScanners = ServiceLoader.load(IPreScanner.class);
+        ServiceLoader<IPostScanner> postScanners = ServiceLoader.load(IPostScanner.class);
         List<IPreScanner> preScannerList = new ArrayList<>();
         preScannerList.add(new IPreScanner() {
             @Override
@@ -83,7 +85,11 @@ public class ContextLoaderListener implements ServletContextListener {
         for (IPreScanner preScanner : preScanners) {
             preScannerList.add(preScanner);
         }
-        CONTAINER = new ClasspathContext(preScannerList, scanPackages);
+        List<IPostScanner> postScannerList = new ArrayList<>();
+        for (IPostScanner postScanner : postScanners) {
+            postScannerList.add(postScanner);
+        }
+        CONTAINER = new ClasspathContext(preScannerList, postScannerList, scanPackages);
         LOGGER.info("register {} beans.", CONTAINER.getBeanCount());
         servletContext.setAttribute(Constants.CONTAINER, CONTAINER);
     }
