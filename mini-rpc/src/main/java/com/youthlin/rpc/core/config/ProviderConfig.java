@@ -13,5 +13,5 @@ public interface ProviderConfig extends ServiceConfig {
      */
     Class<?>[] interfaces();
 
-    Class<? extends Exporter> impl();
+    Class<? extends Exporter> exporter();
 }

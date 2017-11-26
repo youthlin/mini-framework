@@ -13,10 +13,8 @@ import java.io.OutputStream;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.net.Socket;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.FutureTask;
 
 /**
  * 创建: youthlin.chen
@@ -47,6 +45,9 @@ public class SimpleProxyFactory implements ProxyFactory {
     @Override
     public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
         try {
+            if (registryConfig == null) {
+
+            }
             Class<? extends Registry> registryClass = registryConfig.impl();
             Registry registry = cache.get(registryClass);
             if (registry == null) {

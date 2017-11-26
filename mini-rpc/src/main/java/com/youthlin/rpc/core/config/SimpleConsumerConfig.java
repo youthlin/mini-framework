@@ -33,7 +33,7 @@ public class SimpleConsumerConfig extends AbstractConfig implements ConsumerConf
     }
 
     @Override
-    public Class<? extends ProxyFactory> impl() {
+    public Class<? extends ProxyFactory> proxy() {
         return SimpleProxyFactory.class;
     }
 }

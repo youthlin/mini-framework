@@ -1,6 +1,5 @@
 package com.youthlin.rpc.annotation;
 
-import com.youthlin.rpc.core.config.ProxyConfig;
 import com.youthlin.rpc.core.config.NotConfig;
 import com.youthlin.rpc.core.config.RegistryConfig;
 import com.youthlin.rpc.core.config.ServiceConfig;
@@ -26,12 +25,6 @@ public @interface Rpc {
      * 注册中心
      */
     Class<? extends RegistryConfig> registry() default NotConfig.class;
-
-    /**
-     * 对于提供者: 这个配置管理本机对外的响应;
-     * 对于消费者: 这个也是本机连接提供者的配置
-     */
-    Class<? extends ProxyConfig> proxy() default NotConfig.class;
 
     /**
      * 配置这个服务的相关信息

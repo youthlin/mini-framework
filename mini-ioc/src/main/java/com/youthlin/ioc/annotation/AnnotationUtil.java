@@ -204,7 +204,7 @@ public class AnnotationUtil {
         return null;
     }
 
-    static boolean shouldNewInstance(Class c) {
+    public static boolean shouldNewInstance(Class c) {
         int modifiers = c.getModifiers();
         return !Modifier.isInterface(modifiers) && !Modifier.isAbstract(modifiers);
     }

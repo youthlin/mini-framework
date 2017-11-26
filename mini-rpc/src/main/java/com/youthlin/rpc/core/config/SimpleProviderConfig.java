@@ -37,7 +37,7 @@ public class SimpleProviderConfig extends AbstractConfig implements ProviderConf
     }
 
     @Override
-    public Class<? extends Exporter> impl() {
+    public Class<? extends Exporter> exporter() {
         return SimpleExporter.class;
     }
 

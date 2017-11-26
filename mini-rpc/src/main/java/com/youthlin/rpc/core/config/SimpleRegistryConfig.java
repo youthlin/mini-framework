@@ -1,7 +1,6 @@
 package com.youthlin.rpc.core.config;
 
 import com.youthlin.rpc.core.Registry;
-import com.youthlin.rpc.core.SimpleRegistry;
 import com.youthlin.rpc.util.NetUtil;
 
 /**
@@ -17,7 +16,7 @@ public class SimpleRegistryConfig extends AbstractConfig implements RegistryConf
 
     @Override
     public Class<? extends Registry> impl() {
-        return SimpleRegistry.class;
+        return null;
     }
 
     @Override
