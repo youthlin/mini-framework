@@ -7,6 +7,7 @@ import com.youthlin.rpc.util.NetUtil;
 import java.lang.reflect.Method;
 
 /**
+ * 超时无限长, 同步调用, 默认在 1884 端口暴露服务
  * 创建: youthlin.chen
  * 时间: 2017-11-26 15:31
  */
@@ -18,7 +19,7 @@ public class SimpleProviderConfig extends AbstractConfig implements ProviderConf
 
     @Override
     public int port() {
-        return NetUtil.getAvailablePort(NetUtil.DEFAULT_PROVIDER_PORT);
+        return NetUtil.getAvailablePort(NetUtil.DEFAULT_PORT);
     }
 
     @Override

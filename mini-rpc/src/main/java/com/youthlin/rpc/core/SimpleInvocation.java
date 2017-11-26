@@ -4,6 +4,8 @@ import java.util.Arrays;
 import java.util.UUID;
 
 /**
+ * 流式 set 方法, 允许其中某些字段是 null.
+ * 调用时没有结果和异常信息, 返回时可以不返回接口的信息, 只返回结果或异常
  * 创建: youthlin.chen
  * 时间: 2017-11-26 16:44
  */

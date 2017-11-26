@@ -11,12 +11,6 @@ public abstract class AbstractConfig implements Config {
     private Map<String, String> config = new HashMap<>();
 
     @Override
-    public abstract String host();
-
-    @Override
-    public abstract int port();
-
-    @Override
     public Map<String, String> getConfig() {
         return config;
     }

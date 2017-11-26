@@ -7,11 +7,8 @@ import com.youthlin.rpc.annotation.Rpc;
 import com.youthlin.rpc.core.ProxyFactory;
 import com.youthlin.rpc.core.SimpleProxyFactory;
 import com.youthlin.rpc.core.config.ConsumerConfig;
-import com.youthlin.rpc.core.config.NoConfig;
-import com.youthlin.rpc.core.config.RegistryConfig;
 import com.youthlin.rpc.core.config.ServiceConfig;
 import com.youthlin.rpc.core.config.SimpleConsumerConfig;
-import com.youthlin.rpc.core.config.SimpleRegistryConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -25,6 +22,8 @@ import java.util.Set;
  */
 public class RpcPreScanner implements IPreScanner {
     private static final Logger LOGGER = LoggerFactory.getLogger(RpcPreScanner.class);
+    private static final SimpleProxyFactory SIMPLE_PROXY_FACTORY = new SimpleProxyFactory();
+    private static final SimpleConsumerConfig SIMPLE_CONSUMER_CONFIG = new SimpleConsumerConfig();
 
     @Override
     public void preScan(Context context) {
@@ -59,9 +58,9 @@ public class RpcPreScanner implements IPreScanner {
         ProxyFactory proxyFactory;
         ConsumerConfig consumerConfig;
         Class<? extends ServiceConfig> configClass = rpc.config();
-        if (configClass.equals(NoConfig.class)) {
-            proxyFactory = new SimpleProxyFactory();
-            consumerConfig = new SimpleConsumerConfig();
+        if (configClass.equals(ServiceConfig.class)) {
+            proxyFactory = SIMPLE_PROXY_FACTORY;
+            consumerConfig = SIMPLE_CONSUMER_CONFIG;
         } else {
             if (!ConsumerConfig.class.isAssignableFrom(configClass)) {
                 throw new IllegalArgumentException(
@@ -71,14 +70,8 @@ public class RpcPreScanner implements IPreScanner {
             consumerConfig = ConsumerConfig.class.cast(serviceConfig);
             proxyFactory = newInstance(consumerConfig.proxy());
         }
-        Class<? extends RegistryConfig> registryConfigClass = rpc.registry();
-        RegistryConfig registryConfig;
-        if (registryConfigClass.equals(NoConfig.class)) {
-            registryConfig = new SimpleRegistryConfig();
-        } else {
-            registryConfig = newInstance(registryConfigClass);
-        }
-        Object newProxy = proxyFactory.newProxy(interfaceType, registryConfig, consumerConfig);
+
+        Object newProxy = proxyFactory.newProxy(interfaceType, consumerConfig);
 
         //注册到容器 扫描完注入字段时就能注入成功
         context.registerBean(newProxy);

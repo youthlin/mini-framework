@@ -1,7 +1,5 @@
 package com.youthlin.rpc.annotation;
 
-import com.youthlin.rpc.core.config.NoConfig;
-import com.youthlin.rpc.core.config.RegistryConfig;
 import com.youthlin.rpc.core.config.ServiceConfig;
 
 import javax.annotation.Resource;
@@ -22,13 +20,8 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 public @interface Rpc {
     /**
-     * 注册中配置
-     */
-    Class<? extends RegistryConfig> registry() default NoConfig.class;
-
-    /**
      * 配置这个服务的相关信息
      */
-    Class<? extends ServiceConfig> config() default NoConfig.class;
+    Class<? extends ServiceConfig> config() default ServiceConfig.class;
 
 }

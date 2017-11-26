@@ -5,10 +5,7 @@ import com.youthlin.ioc.context.Context;
 import com.youthlin.ioc.spi.IPostScanner;
 import com.youthlin.rpc.annotation.Rpc;
 import com.youthlin.rpc.core.Exporter;
-import com.youthlin.rpc.core.Registry;
-import com.youthlin.rpc.core.config.NoConfig;
 import com.youthlin.rpc.core.config.ProviderConfig;
-import com.youthlin.rpc.core.config.RegistryConfig;
 import com.youthlin.rpc.core.config.ServiceConfig;
 import com.youthlin.rpc.core.config.SimpleProviderConfig;
 import org.slf4j.Logger;
@@ -23,6 +20,7 @@ import java.util.Map;
  */
 public class RpcPostScanner implements IPostScanner {
     private static final Logger LOGGER = LoggerFactory.getLogger(RpcPostScanner.class);
+    private static final SimpleProviderConfig SIMPLE_PROVIDER_CONFIG = new SimpleProviderConfig();
 
     @Override
     public void postScanner(Context context) {
@@ -38,8 +36,8 @@ public class RpcPostScanner implements IPostScanner {
 
                 Class<? extends ServiceConfig> config = rpc.config();
                 ProviderConfig providerConfig;
-                if (config.equals(NoConfig.class)) {//没有配置
-                    providerConfig = new SimpleProviderConfig();
+                if (config.equals(ServiceConfig.class)) {//没有配置
+                    providerConfig = SIMPLE_PROVIDER_CONFIG;
                 } else {
                     if (!ProviderConfig.class.isAssignableFrom(config)) {
                         LOGGER.warn("Service config should be a sub class of ProviderConfig on Provider Side. {}", rpc);
@@ -48,16 +46,6 @@ public class RpcPostScanner implements IPostScanner {
                     }
                     ServiceConfig serviceConfig = getFromContextOrNewInstance(context, config);
                     providerConfig = ProviderConfig.class.cast(serviceConfig);
-                }
-
-                Class<? extends RegistryConfig> registry = rpc.registry();
-                if (registry.equals(NoConfig.class)) {//没有配置
-                } else {
-                    RegistryConfig registryConfig = getFromContextOrNewInstance(context, registry);
-                    Class<? extends Registry> registryImplClass = registryConfig.impl();
-                    Registry registryImpl = getFromContextOrNewInstance(context, registryImplClass);
-                    registryImpl.setConfig(registryConfig);
-                    registryImpl.register(providerConfig, instance);
                 }
 
                 Class<? extends Exporter> exporter = providerConfig.exporter();

@@ -7,10 +7,6 @@ import java.util.Map;
  * 时间: 2017-11-26 15:08
  */
 public interface Config {
-    String host();
-
-    int port();
-
     Map<String, String> getConfig();
 
     String getConfig(String key);

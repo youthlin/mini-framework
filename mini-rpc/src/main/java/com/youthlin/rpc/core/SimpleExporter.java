@@ -12,6 +12,9 @@ import java.io.ObjectOutputStream;
 import java.io.OutputStream;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.net.Inet4Address;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.Arrays;
@@ -31,6 +34,16 @@ public class SimpleExporter implements Exporter {
     private Map<Key, ServerSocket> serverSocketMap = new HashMap<>();
     private ExecutorService executorService = Executors.newCachedThreadPool();
 
+    {
+        Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
+            @Override public void run() {
+                LOGGER.info("shutting down....");
+                executorService.shutdown();
+                LOGGER.info("shutdown success.");
+            }
+        }));
+    }
+
     private static class Key {
         private String host;
         private int port;
@@ -42,12 +55,15 @@ public class SimpleExporter implements Exporter {
 
         @Override
         public boolean equals(Object o) {
-            if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
+            if (this == o)
+                return true;
+            if (o == null || getClass() != o.getClass())
+                return false;
 
             Key key = (Key) o;
 
-            if (port != key.port) return false;
+            if (port != key.port)
+                return false;
             return host != null ? host.equals(key.host) : key.host == null;
         }
 
@@ -149,7 +165,8 @@ public class SimpleExporter implements Exporter {
         boolean found = false;
         try {
             for (Method method : methods) {
-                if (Objects.equals(methodName, method.getName()) && Arrays.equals(argsType, method.getParameterTypes())) {
+                if (Objects.equals(methodName, method.getName()) && Arrays
+                        .equals(argsType, method.getParameterTypes())) {
                     found = true;
                     Object invoke = method.invoke(instance, args);
                     result.setValue(invoke);

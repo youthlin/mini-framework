@@ -3,7 +3,7 @@ package com.youthlin.rpc.core;
 import com.youthlin.rpc.core.config.ProviderConfig;
 
 /**
- * 提供者的代理
+ * 提供者与消费者通信的代理
  * 创建: youthlin.chen
  * 时间: 2017-11-26 16:32
  */
@@ -15,8 +15,8 @@ public interface Exporter {
     void export(ProviderConfig providerConfig, Object instance);
 
     /**
-     * @param invocation 请求需要包含 uuid, interfaceType, methodName, argsType[], args[],
-     * @return 响应需要包含 uuid, value, exception(如果异常)
+     * @param invocation 请求需要包含 uid, interfaceType, methodName, argsType[], args[],
+     * @return 响应需要包含 uid, value, exception(如果异常)
      */
     Invocation handler(Invocation invocation);
 

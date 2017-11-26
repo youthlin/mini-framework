@@ -18,12 +18,9 @@ import java.util.regex.Pattern;
  */
 public class NetUtil {
     private static final Logger LOGGER = LoggerFactory.getLogger(NetUtil.class);
-    public static final int DEFAULT_REGISTRY_PORT = 5513;
-    public static final int DEFAULT_PROVIDER_PORT = 1884;
-    public static final int DEFAULT_CONSUMER_PORT = 1816;
+    public static final int DEFAULT_PORT = 1884;
     public static final String ANY_HOST = "0.0.0.0";
-    public static final String LOCALHOST = "localhost";
-    public static final String LOCALHOST_IP = "127.0.0.1";
+    public static final String LOCALHOST = "127.0.0.1";
     private static final Pattern IP_PATTERN = Pattern.compile("\\d{1,3}(\\.\\d{1,3}){3,5}$");
     private static final int RND_PORT_START = 30000;
     private static final int RND_PORT_RANGE = 10000;
@@ -76,7 +73,6 @@ public class NetUtil {
     public static int getRandomPort() {
         return RND_PORT_START + RANDOM.nextInt(RND_PORT_RANGE);
     }
-
 
     public static InetAddress getLocalAddress() {
         if (LOCAL_ADDRESS != null)
@@ -131,7 +127,7 @@ public class NetUtil {
         String name = address.getHostAddress();
         return (name != null
                 && !ANY_HOST.equals(name)
-                && !LOCALHOST_IP.equals(name)
+                && !LOCALHOST.equals(name)
                 && IP_PATTERN.matcher(name).matches());
     }
 

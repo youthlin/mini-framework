@@ -3,7 +3,7 @@ package com.youthlin.rpc.core.config;
 import com.youthlin.rpc.core.Exporter;
 
 /**
- * 每个服务的配置
+ * 提供者配置
  * 创建: youthlin.chen
  * 时间: 2017-11-26 15:08
  */
