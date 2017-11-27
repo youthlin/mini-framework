@@ -45,7 +45,7 @@ public class SimpleProxyFactory implements ProxyFactory {
                 String host = consumerConfig.host();
                 int port = consumerConfig.port();
                 Socket socket = new Socket(host, port);
-
+                LOGGER.debug("Connect to provider {}", socket);
                 OutputStream outputStream = socket.getOutputStream();
                 InputStream inputStream = socket.getInputStream();
                 ObjectOutputStream out = new ObjectOutputStream(outputStream);
