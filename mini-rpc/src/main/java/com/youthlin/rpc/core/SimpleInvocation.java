@@ -9,7 +9,7 @@ import java.util.UUID;
  * 创建: youthlin.chen
  * 时间: 2017-11-26 16:44
  */
-@SuppressWarnings({ "UnusedReturnValue", "WeakerAccess" })
+@SuppressWarnings({"UnusedReturnValue", "WeakerAccess"})
 public class SimpleInvocation implements Invocation {
     private String uid = UUID.randomUUID().toString();
     private Class<?> invokeInterface;

@@ -13,6 +13,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.Field;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -24,6 +26,7 @@ public class RpcPreScanner implements IPreScanner {
     private static final Logger LOGGER = LoggerFactory.getLogger(RpcPreScanner.class);
     private static final SimpleProxyFactory SIMPLE_PROXY_FACTORY = new SimpleProxyFactory();
     private static final SimpleConsumerConfig SIMPLE_CONSUMER_CONFIG = new SimpleConsumerConfig();
+    private static final Map<Class<?>, Object> CACHE = new HashMap<>();
 
     @Override
     public void preScan(Context context) {
@@ -58,7 +61,7 @@ public class RpcPreScanner implements IPreScanner {
         ProxyFactory proxyFactory;
         ConsumerConfig consumerConfig;
         Class<? extends ServiceConfig> configClass = rpc.config();
-        if (configClass.equals(ServiceConfig.class)) {
+        if (configClass.equals(ServiceConfig.class)) {//没有配置 默认认为是本机
             proxyFactory = SIMPLE_PROXY_FACTORY;
             consumerConfig = SIMPLE_CONSUMER_CONFIG;
         } else {
@@ -70,7 +73,7 @@ public class RpcPreScanner implements IPreScanner {
             consumerConfig = ConsumerConfig.class.cast(serviceConfig);
             proxyFactory = newInstance(consumerConfig.proxy());
         }
-
+        //代理这个字段的所有方法
         Object newProxy = proxyFactory.newProxy(interfaceType, consumerConfig);
 
         //注册到容器 扫描完注入字段时就能注入成功
@@ -78,10 +81,16 @@ public class RpcPreScanner implements IPreScanner {
     }
 
     private <T> T newInstance(Class<T> aClass) throws IllegalAccessException, InstantiationException {
+        Object instance = CACHE.get(aClass);
+        if (instance != null) {
+            return aClass.cast(instance);
+        }
         if (!AnnotationUtil.shouldNewInstance(aClass)) {
             throw new IllegalArgumentException(aClass + " should not be an interface or abstract");
         }
-        return aClass.newInstance();
-
+        T newInstance = aClass.newInstance();
+        CACHE.put(aClass, newInstance);
+        return newInstance;
     }
+
 }

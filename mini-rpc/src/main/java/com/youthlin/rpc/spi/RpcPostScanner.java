@@ -5,6 +5,7 @@ import com.youthlin.ioc.context.Context;
 import com.youthlin.ioc.spi.IPostScanner;
 import com.youthlin.rpc.annotation.Rpc;
 import com.youthlin.rpc.core.Exporter;
+import com.youthlin.rpc.core.SimpleExporter;
 import com.youthlin.rpc.core.config.ProviderConfig;
 import com.youthlin.rpc.core.config.ServiceConfig;
 import com.youthlin.rpc.core.config.SimpleProviderConfig;
@@ -21,6 +22,7 @@ import java.util.Map;
 public class RpcPostScanner implements IPostScanner {
     private static final Logger LOGGER = LoggerFactory.getLogger(RpcPostScanner.class);
     private static final SimpleProviderConfig SIMPLE_PROVIDER_CONFIG = new SimpleProviderConfig();
+    private static final SimpleExporter SIMPLE_EXPORTER = new SimpleExporter();
 
     @Override
     public void postScanner(Context context) {
@@ -36,8 +38,10 @@ public class RpcPostScanner implements IPostScanner {
 
                 Class<? extends ServiceConfig> config = rpc.config();
                 ProviderConfig providerConfig;
+                Exporter exporterImpl;
                 if (config.equals(ServiceConfig.class)) {//没有配置
                     providerConfig = SIMPLE_PROVIDER_CONFIG;
+                    exporterImpl = SIMPLE_EXPORTER;
                 } else {
                     if (!ProviderConfig.class.isAssignableFrom(config)) {
                         LOGGER.warn("Service config should be a sub class of ProviderConfig on Provider Side. {}", rpc);
@@ -46,10 +50,9 @@ public class RpcPostScanner implements IPostScanner {
                     }
                     ServiceConfig serviceConfig = getFromContextOrNewInstance(context, config);
                     providerConfig = ProviderConfig.class.cast(serviceConfig);
+                    Class<? extends Exporter> exporter = providerConfig.exporter();
+                    exporterImpl = getFromContextOrNewInstance(context, exporter);
                 }
-
-                Class<? extends Exporter> exporter = providerConfig.exporter();
-                Exporter exporterImpl = getFromContextOrNewInstance(context, exporter);
                 exporterImpl.export(providerConfig, instance);
             }
         } catch (Throwable t) {

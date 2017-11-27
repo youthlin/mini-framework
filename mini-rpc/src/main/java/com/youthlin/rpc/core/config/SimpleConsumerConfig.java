@@ -25,6 +25,11 @@ public class SimpleConsumerConfig extends AbstractConfig implements ConsumerConf
     }
 
     @Override
+    public Class<? extends ProxyFactory> proxy() {
+        return SimpleProxyFactory.class;
+    }
+
+    @Override
     public int timeout(Method method) {
         return Integer.MAX_VALUE;
     }
@@ -34,8 +39,4 @@ public class SimpleConsumerConfig extends AbstractConfig implements ConsumerConf
         return false;
     }
 
-    @Override
-    public Class<? extends ProxyFactory> proxy() {
-        return SimpleProxyFactory.class;
-    }
 }

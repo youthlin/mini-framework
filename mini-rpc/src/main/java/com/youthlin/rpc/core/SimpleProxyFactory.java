@@ -14,6 +14,7 @@ import java.lang.reflect.Proxy;
 import java.net.Socket;
 
 /**
+ * 使用 JDK 动态代理, 代理远程接口的所有方法, 通过 Socket 发送调用信息到提供者并等待结果返回.
  * 创建: youthlin.chen
  * 时间: 2017-11-26 17:38
  */
@@ -24,7 +25,7 @@ public class SimpleProxyFactory implements ProxyFactory {
     public <T> T newProxy(Class<T> interfaceType, ConsumerConfig consumerConfig) {
         return (T) Proxy.newProxyInstance(
                 interfaceType.getClassLoader(),
-                new Class[] { interfaceType },
+                new Class[]{interfaceType},
                 new SimpleProxy(interfaceType, consumerConfig));
     }
 
@@ -65,7 +66,10 @@ public class SimpleProxyFactory implements ProxyFactory {
                 }
                 return result.getValue();
             } catch (Throwable t) {
-                LOGGER.error("invoke error", t);
+                LOGGER.error("invoke error. host:{} port:{}", consumerConfig.host(), consumerConfig.port(), t);
+                if (t instanceof RpcException) {
+                    throw t;
+                }
                 throw new RpcException(t);
             }
         }

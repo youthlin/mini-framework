@@ -16,7 +16,7 @@ import java.lang.annotation.Target;
  * 时间: 2017-11-26 14:37
  */
 @Resource
-@Target({ ElementType.TYPE, ElementType.FIELD })
+@Target({ElementType.TYPE, ElementType.FIELD})
 @Retention(RetentionPolicy.RUNTIME)
 public @interface Rpc {
     /**

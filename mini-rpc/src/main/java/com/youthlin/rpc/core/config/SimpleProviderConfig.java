@@ -14,7 +14,7 @@ import java.lang.reflect.Method;
 public class SimpleProviderConfig extends AbstractConfig implements ProviderConfig {
     @Override
     public String host() {
-        return NetUtil.getLocalAddress().getHostAddress();
+        return NetUtil.ANY_HOST;
     }
 
     @Override

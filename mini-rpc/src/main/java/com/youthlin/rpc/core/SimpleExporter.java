@@ -12,9 +12,7 @@ import java.io.ObjectOutputStream;
 import java.io.OutputStream;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.net.Inet4Address;
 import java.net.InetAddress;
-import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.Arrays;
@@ -36,9 +34,15 @@ public class SimpleExporter implements Exporter {
 
     {
         Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
-            @Override public void run() {
+            @Override
+            public void run() {
                 LOGGER.info("shutting down....");
                 executorService.shutdown();
+                for (Map.Entry<Key, ServerSocket> entry : serverSocketMap.entrySet()) {
+                    ServerSocket serverSocket = entry.getValue();
+                    NetUtil.close(serverSocket);
+                    LOGGER.info("ServerSocket Closed {} {}", entry.getKey(), serverSocket);
+                }
                 LOGGER.info("shutdown success.");
             }
         }));
@@ -73,6 +77,14 @@ public class SimpleExporter implements Exporter {
             result = 31 * result + port;
             return result;
         }
+
+        @Override
+        public String toString() {
+            return "{" +
+                    "host='" + host + '\'' +
+                    ", port=" + port +
+                    '}';
+        }
     }
 
     @Override
@@ -90,7 +102,7 @@ public class SimpleExporter implements Exporter {
         ServerSocket serverSocket = serverSocketMap.get(key);
         if (serverSocket == null) {
             try {
-                serverSocket = new ServerSocket(port);
+                serverSocket = new ServerSocket(port, 0, InetAddress.getByName(host));
                 final ServerSocket ss = serverSocket;
                 String hostAddress = serverSocket.getInetAddress().getHostAddress();
                 LOGGER.info("export service at: {}:{} config host:{}", hostAddress, port, host);
@@ -100,7 +112,10 @@ public class SimpleExporter implements Exporter {
                     public void run() {
                         while (true) {
                             try {
-                                LOGGER.debug("waiting client...");
+                                if (ss.isClosed()) {
+                                    break;
+                                }
+                                LOGGER.trace("waiting client...");
                                 Socket client = ss.accept();
                                 executorService.submit(new Handler(client));
                             } catch (IOException e) {
@@ -134,7 +149,7 @@ public class SimpleExporter implements Exporter {
                 OutputStream outputStream = socket.getOutputStream();
                 in = new ObjectInputStream(inputStream);
                 out = new ObjectOutputStream(outputStream);
-                LOGGER.debug("read from client...");
+                LOGGER.trace("read from client...");
                 Invocation invocation = (Invocation) in.readObject();
                 LOGGER.debug("read from client: {}", invocation);
                 invocation = handler(invocation);
@@ -173,9 +188,12 @@ public class SimpleExporter implements Exporter {
                     break;
                 }
             }
-        } catch (IllegalAccessException | InvocationTargetException e) {
+        } catch (IllegalAccessException e) {
             LOGGER.error("Invoke Error", e);
             result.setException(e);
+        } catch (InvocationTargetException e) {
+            LOGGER.error("Invoke Error", e);
+            result.setException(e.getCause());
         }
         if (!found) {
             result.setException(new NoSuchMethodException(methodName));
