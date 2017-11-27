@@ -1,6 +1,9 @@
 package com.youthlin.rpc.core;
 
+import java.io.Serializable;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -19,6 +22,7 @@ public class SimpleInvocation implements Invocation {
     private Object[] args;
     private Object value;
     private Throwable exception;
+    private Map<String, Serializable> ext = new HashMap<>();
 
     public static SimpleInvocation newInvocation() {
         return new SimpleInvocation();
@@ -30,6 +34,11 @@ public class SimpleInvocation implements Invocation {
     @Override
     public String uid() {
         return uid;
+    }
+
+    @Override
+    public Map<String, Serializable> ext() {
+        return ext;
     }
 
     @Override
@@ -107,6 +116,11 @@ public class SimpleInvocation implements Invocation {
         return this;
     }
 
+    public SimpleInvocation ext(String key, Serializable value) {
+        ext.put(key, value);
+        return this;
+    }
+
     @Override
     public String toString() {
         return "SimpleInvocation{" +
@@ -118,6 +132,7 @@ public class SimpleInvocation implements Invocation {
                 ", args=" + Arrays.toString(args) +
                 ", value=" + value +
                 ", exception=" + exception +
+                ", ext=" + ext +
                 '}';
     }
 }

@@ -23,8 +23,8 @@ public class SimpleProviderConfig extends AbstractConfig implements ProviderConf
     }
 
     @Override
-    public Integer timeout(Method method) {
-        return Integer.MAX_VALUE;
+    public Long timeout(Method method) {
+        return Long.MAX_VALUE;
     }
 
     @Override

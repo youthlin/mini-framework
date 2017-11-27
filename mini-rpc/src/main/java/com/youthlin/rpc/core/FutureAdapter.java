@@ -15,6 +15,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 @SuppressWarnings("WeakerAccess")
 public class FutureAdapter<V> implements Future<V> {
     private V value;
+    private long timeout;//ms
     private Throwable exception;
     private AtomicBoolean done = new AtomicBoolean(false);
 
@@ -26,6 +27,10 @@ public class FutureAdapter<V> implements Future<V> {
     public void setException(Throwable exception) {
         this.exception = exception;
         done.set(true);
+    }
+
+    public void setTimeout(long timeout) {
+        this.timeout = timeout;
     }
 
     @Override

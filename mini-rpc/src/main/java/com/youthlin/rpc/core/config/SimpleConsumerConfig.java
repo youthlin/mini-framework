@@ -31,8 +31,8 @@ public class SimpleConsumerConfig extends AbstractConsumerConfig implements Cons
     }
 
     @Override
-    public Integer timeout(Method method) {
-        return Integer.MAX_VALUE;
+    public Long timeout(Method method) {
+        return Long.MAX_VALUE;
     }
 
     @Override

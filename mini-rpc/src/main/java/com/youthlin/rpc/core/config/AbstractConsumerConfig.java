@@ -21,8 +21,8 @@ public abstract class AbstractConsumerConfig extends AbstractConfig implements C
     public abstract Class<? extends ProxyFactory> proxy();
 
     @Override
-    public Integer timeout(Method method) {
-        return Integer.MAX_VALUE;
+    public Long timeout(Method method) {
+        return Long.MAX_VALUE;
     }
 
     @Override

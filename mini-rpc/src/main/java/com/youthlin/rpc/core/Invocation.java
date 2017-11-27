@@ -1,6 +1,7 @@
 package com.youthlin.rpc.core;
 
 import java.io.Serializable;
+import java.util.Map;
 
 /**
  * 一次调用过程的信息
@@ -9,6 +10,8 @@ import java.io.Serializable;
  */
 public interface Invocation extends Serializable {
     String uid();
+
+    Map<String, Serializable> ext();
 
     //请求-----------------------------
 

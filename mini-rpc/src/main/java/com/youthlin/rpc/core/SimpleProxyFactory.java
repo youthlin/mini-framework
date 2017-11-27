@@ -16,9 +16,12 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.Arrays;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 /**
  * 使用 JDK 动态代理, 代理远程接口的所有方法, 通过 Socket 发送调用信息到提供者并等待结果返回.
@@ -35,13 +38,17 @@ public class SimpleProxyFactory implements ProxyFactory {
                 new SimpleProxy(interfaceType, consumerConfig));
     }
 
+    public static void setExecutoeService(ExecutorService service) {
+        SimpleProxy.executorService = service;
+    }
+
     private static class SimpleProxy implements InvocationHandler {
         private static final Logger LOGGER = LoggerFactory.getLogger(SimpleProxyFactory.class);
-        private ExecutorService executorService = Executors.newCachedThreadPool();
+        private static ExecutorService executorService = Executors.newCachedThreadPool();
         private Class<?> interfaceType;
         private ConsumerConfig consumerConfig;
 
-        {
+        static {
             Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
                 @Override
                 public void run() {
@@ -57,60 +64,111 @@ public class SimpleProxyFactory implements ProxyFactory {
             this.consumerConfig = consumerConfig;
         }
 
-        //todo timeout, callback
+        //todo  callback
         @SuppressWarnings("unchecked")
         @Override
         public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+            //扩展, consumerConfig 里可以有注册中心的信息, 先请求注册中心拿到 这次要调用的提供者的 host, port
+            String host = consumerConfig.host();
+            int port = consumerConfig.port();
+            Key key = new Key(host, port);
+
+            if (!method.getDeclaringClass().equals(interfaceType)) {//不是这个接口的方法
+                LOGGER.debug("Method {} is not of remote interface {}. invoke local.", method, interfaceType);
+                return method.invoke(key, args);//toString, hashCode, equals, etc...//fixme If it's Ok???
+            }
+            Socket socket = null;
+            ObjectOutputStream out = null;
+            ObjectInputStream in = null;
+            boolean needReturn = needReturn(method);
             try {
-                String host = consumerConfig.host();
-                int port = consumerConfig.port();
-                Socket socket = new Socket(host, port);
+                socket = new Socket(host, port);
                 LOGGER.debug("Connect to provider {}", socket);
                 OutputStream outputStream = socket.getOutputStream();
                 InputStream inputStream = socket.getInputStream();
-                final ObjectOutputStream out = new ObjectOutputStream(outputStream);
-                final ObjectInputStream in = new ObjectInputStream(inputStream);
-
+                out = new ObjectOutputStream(outputStream);
+                in = new ObjectInputStream(inputStream);
+                final Socket fs = socket;
+                final ObjectInputStream fin = in;
+                final ObjectOutputStream fout = out;
                 Class<?> returnType = method.getReturnType();
                 SimpleInvocation invocation = SimpleInvocation.newInvocation()
                         .setInvokeInterface(interfaceType)
                         .setReturnType(returnType)
                         .setMethodName(method.getName())
                         .setArgsType(method.getParameterTypes())
-                        .setArgs(args);
+                        .setArgs(args)
+                        .ext(Config.RETURN, needReturn);
 
                 out.writeObject(invocation);
-                Boolean async = consumerConfig.async(method);
-                if (async == null) {
-                    async = consumerConfig.getConfig(method, Config.ASYNC, false);
-                    if (async == null) {
-                        async = consumerConfig.getConfig(Config.ASYNC, false);
-                    }
+
+                if (!needReturn) {
+                    return null;//不需要返回结果
                 }
-                if (async) {
-                    RpcFuture<?> rpcFuture = RpcFuture.getRpcFuture();
-                    final FutureAdapter futureAdapter = new FutureAdapter<>();
-                    rpcFuture.setFuture(futureAdapter);
-                    executorService.submit(new Runnable() {
-                        @Override
-                        public void run() {
-                            try {
-                                getResult(in, futureAdapter);
-                            } catch (Throwable t) {
-                                futureAdapter.setException(t);
-                            }
+
+                long timeout = getTimeOut(method);
+
+                RpcFuture<?> rpcFuture = RpcFuture.getRpcFuture();
+                final FutureAdapter futureAdapter = new FutureAdapter<>();
+                rpcFuture.setFuture(futureAdapter);
+                executorService.submit(new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            getResult(fin, futureAdapter);
+                        } catch (Throwable t) {
+                            futureAdapter.setException(t);
+                        } finally {
+                            NetUtil.close(fin, fout, fs);
                         }
-                    });
+                    }
+                });
+
+                if (async(method)) {
                     return null;//立即返回
                 }
-                return getResult(in, null);
+                return futureAdapter.get(timeout, TimeUnit.MILLISECONDS);
             } catch (Throwable t) {
                 LOGGER.error("invoke error. host:{} port:{}", consumerConfig.host(), consumerConfig.port(), t);
                 if (t instanceof RpcException) {
                     throw t;
                 }
                 throw new RpcException(t);
+            } finally {
+                if (!needReturn) {
+                    NetUtil.close(in, out, socket);
+                }
             }
+        }
+
+        private long getTimeOut(Method method) {
+            Long timeout = consumerConfig.timeout(method);
+            if (timeout == null) {
+                timeout = consumerConfig.getConfig(method, Config.TIMEOUT, Long.MAX_VALUE);
+                if (timeout == null) {
+                    timeout = consumerConfig.getConfig(Config.TIMEOUT, Long.MAX_VALUE);
+                }
+            }
+            return timeout;
+        }
+
+        private boolean async(Method method) {
+            Boolean async = consumerConfig.async(method);
+            if (async == null) {
+                async = consumerConfig.getConfig(method, Config.ASYNC, false);
+                if (async == null) {
+                    async = consumerConfig.getConfig(Config.ASYNC, false);
+                }
+            }
+            return async;
+        }
+
+        private boolean needReturn(Method method) {
+            Boolean needRet = consumerConfig.getConfig(method, Config.RETURN, true);
+            if (needRet == null) {
+                needRet = consumerConfig.getConfig(Config.RETURN, true);
+            }
+            return needRet;
         }
 
         @SuppressWarnings("unchecked")

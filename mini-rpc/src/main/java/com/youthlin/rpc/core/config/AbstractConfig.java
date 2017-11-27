@@ -31,7 +31,7 @@ public abstract class AbstractConfig implements ServiceConfig {
     }
 
     @Override
-    public Integer getConfig(String key, int dft) {
+    public int getConfig(String key, int dft) {
         String value = getConfig(key);
         if (value != null) {
             try {
@@ -43,7 +43,7 @@ public abstract class AbstractConfig implements ServiceConfig {
     }
 
     @Override
-    public Long getConfig(String key, long dft) {
+    public long getConfig(String key, long dft) {
         String value = getConfig(key);
         if (value != null) {
             try {
@@ -55,7 +55,7 @@ public abstract class AbstractConfig implements ServiceConfig {
     }
 
     @Override
-    public Double getConfig(String key, double dft) {
+    public double getConfig(String key, double dft) {
         String value = getConfig(key);
         if (value != null) {
             try {
@@ -67,7 +67,7 @@ public abstract class AbstractConfig implements ServiceConfig {
     }
 
     @Override
-    public Boolean getConfig(String key, boolean dft) {
+    public boolean getConfig(String key, boolean dft) {
         String value = getConfig(key);
         if (value == null || value.isEmpty()) {
             return dft;

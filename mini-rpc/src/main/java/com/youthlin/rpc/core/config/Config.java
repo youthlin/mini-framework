@@ -18,12 +18,12 @@ public interface Config {
 
     String getConfig(String key, String dft);
 
-    Integer getConfig(String key, int dft);
+    int getConfig(String key, int dft);
 
-    Long getConfig(String key, long dft);
+    long getConfig(String key, long dft);
 
-    Double getConfig(String key, double dft);
+    double getConfig(String key, double dft);
 
-    Boolean getConfig(String key, boolean dft);
+    boolean getConfig(String key, boolean dft);
 
 }

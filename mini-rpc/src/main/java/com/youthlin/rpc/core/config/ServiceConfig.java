@@ -18,7 +18,7 @@ public interface ServiceConfig extends Config {
     int port();
 
     //region 顺序: async(method) -> getConfig(method, async, dft) -> getConfig(async, dft) 用第一个非 null 的
-    Integer timeout(Method method);
+    Long timeout(Method method);//ms
 
     Boolean async(Method method);
     //endregion

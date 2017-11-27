@@ -1,5 +1,6 @@
 package com.youthlin.rpc.core;
 
+import com.youthlin.rpc.core.config.Config;
 import com.youthlin.rpc.core.config.ProviderConfig;
 import com.youthlin.rpc.util.NetUtil;
 import org.slf4j.Logger;
@@ -46,45 +47,6 @@ public class SimpleExporter implements Exporter {
                 LOGGER.info("shutdown success.");
             }
         }));
-    }
-
-    private static class Key {
-        private String host;
-        private int port;
-
-        private Key(String host, int port) {
-            this.host = host;
-            this.port = port;
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (this == o)
-                return true;
-            if (o == null || getClass() != o.getClass())
-                return false;
-
-            Key key = (Key) o;
-
-            if (port != key.port)
-                return false;
-            return host != null ? host.equals(key.host) : key.host == null;
-        }
-
-        @Override
-        public int hashCode() {
-            int result = host != null ? host.hashCode() : 0;
-            result = 31 * result + port;
-            return result;
-        }
-
-        @Override
-        public String toString() {
-            return "{" +
-                    "host='" + host + '\'' +
-                    ", port=" + port +
-                    '}';
-        }
     }
 
     @Override
@@ -151,17 +113,26 @@ public class SimpleExporter implements Exporter {
                 out = new ObjectOutputStream(outputStream);
                 LOGGER.trace("read from client...");
                 Invocation invocation = (Invocation) in.readObject();
-                LOGGER.debug("read from client: {}", invocation);
+                boolean debugEnabled = LOGGER.isDebugEnabled();
+                if (debugEnabled) {
+                    LOGGER.debug("read from client: {} {}", invocation.methodName(), invocation);
+                }
+                boolean needReturn = (Boolean) invocation.ext().get(Config.RETURN);
                 invocation = handler(invocation);
-                LOGGER.debug("after invoke: {}", invocation);
-                out.writeObject(invocation);
+                if (debugEnabled) {
+                    LOGGER.debug("after invoke: value={} ex={}", invocation.getValue(), invocation.getException());
+                }
+                if (needReturn) {
+                    LOGGER.trace("return to client");
+                    out.writeObject(invocation);
+                }
             } catch (IOException e) {
                 LOGGER.warn("Read from client: IOException", e);
             } catch (ClassNotFoundException | ClassCastException e) {
                 e.printStackTrace();
             } finally {
                 LOGGER.debug("closing client... {}", socket);
-                NetUtil.close(in, out, socket);
+                NetUtil.close(out, in, socket);
             }
         }
     }
