@@ -3,6 +3,7 @@ package com.youthlin.rpc.core;
 import com.youthlin.rpc.core.config.Config;
 import com.youthlin.rpc.core.config.ConsumerConfig;
 import com.youthlin.rpc.util.NetUtil;
+import com.youthlin.rpc.util.RpcUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -14,11 +15,7 @@ import java.io.OutputStream;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
-import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.Arrays;
-import java.util.Map;
-import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -34,7 +31,7 @@ public class SimpleProxyFactory implements ProxyFactory {
     public <T> T newProxy(Class<T> interfaceType, ConsumerConfig consumerConfig) {
         return (T) Proxy.newProxyInstance(
                 interfaceType.getClassLoader(),
-                new Class[]{interfaceType},
+                new Class[] { interfaceType },
                 new SimpleProxy(interfaceType, consumerConfig));
     }
 
@@ -71,16 +68,29 @@ public class SimpleProxyFactory implements ProxyFactory {
             //扩展, consumerConfig 里可以有注册中心的信息, 先请求注册中心拿到 这次要调用的提供者的 host, port
             String host = consumerConfig.host();
             int port = consumerConfig.port();
-            Key key = new Key(host, port);
 
             if (!method.getDeclaringClass().equals(interfaceType)) {//不是这个接口的方法
                 LOGGER.debug("Method {} is not of remote interface {}. invoke local.", method, interfaceType);
-                return method.invoke(key, args);//toString, hashCode, equals, etc...//fixme If it's Ok???
+                if (method.getName().equals("equals") && args.length == 1) {
+                    Object other = args[0];
+                    if (Proxy.isProxyClass(other.getClass())) {
+                        return equals(Proxy.getInvocationHandler(other));
+                    }
+                    return false;
+                }
+                if (method.getName().equals("hashCode") && method.getParameterTypes().length == 0) {
+                    return hashCode();
+                }
+                if (method.getName().equals("toString") && method.getParameterTypes().length == 0) {
+                    //... who cares then overwrite here ...
+                }
+                return method.invoke(this, args);
             }
+
             Socket socket = null;
             ObjectOutputStream out = null;
             ObjectInputStream in = null;
-            boolean needReturn = needReturn(method);
+            boolean needReturn = RpcUtil.needReturn(consumerConfig, method);
             try {
                 socket = new Socket(host, port);
                 LOGGER.debug("Connect to provider {}", socket);
@@ -106,7 +116,7 @@ public class SimpleProxyFactory implements ProxyFactory {
                     return null;//不需要返回结果
                 }
 
-                long timeout = getTimeOut(method);
+                long timeout = RpcUtil.getTimeOut(consumerConfig, method);
 
                 RpcFuture<?> rpcFuture = RpcFuture.getRpcFuture();
                 final FutureAdapter futureAdapter = new FutureAdapter<>();
@@ -124,7 +134,7 @@ public class SimpleProxyFactory implements ProxyFactory {
                     }
                 });
 
-                if (async(method)) {
+                if (RpcUtil.async(consumerConfig, method)) {
                     return null;//立即返回
                 }
                 return futureAdapter.get(timeout, TimeUnit.MILLISECONDS);
@@ -141,38 +151,8 @@ public class SimpleProxyFactory implements ProxyFactory {
             }
         }
 
-        private long getTimeOut(Method method) {
-            Long timeout = consumerConfig.timeout(method);
-            if (timeout == null) {
-                timeout = consumerConfig.getConfig(method, Config.TIMEOUT, Long.MAX_VALUE);
-                if (timeout == null) {
-                    timeout = consumerConfig.getConfig(Config.TIMEOUT, Long.MAX_VALUE);
-                }
-            }
-            return timeout;
-        }
-
-        private boolean async(Method method) {
-            Boolean async = consumerConfig.async(method);
-            if (async == null) {
-                async = consumerConfig.getConfig(method, Config.ASYNC, false);
-                if (async == null) {
-                    async = consumerConfig.getConfig(Config.ASYNC, false);
-                }
-            }
-            return async;
-        }
-
-        private boolean needReturn(Method method) {
-            Boolean needRet = consumerConfig.getConfig(method, Config.RETURN, true);
-            if (needRet == null) {
-                needRet = consumerConfig.getConfig(Config.RETURN, true);
-            }
-            return needRet;
-        }
-
         @SuppressWarnings("unchecked")
-        private Object getResult(ObjectInputStream in,
+        private void getResult(ObjectInputStream in,
                 FutureAdapter futureAdapter) {
             Invocation result;
             try {
@@ -193,9 +173,28 @@ public class SimpleProxyFactory implements ProxyFactory {
             if (futureAdapter != null) {
                 futureAdapter.setValue(value);
             }
-            return value;
         }
 
+        @Override
+        public boolean equals(Object o) {
+            if (this == o)
+                return true;
+            if (o == null || getClass() != o.getClass())
+                return false;
+
+            SimpleProxy that = (SimpleProxy) o;
+
+            if (interfaceType != null ? !interfaceType.equals(that.interfaceType) : that.interfaceType != null)
+                return false;
+            return consumerConfig != null ? consumerConfig.equals(that.consumerConfig) : that.consumerConfig == null;
+        }
+
+        @Override
+        public int hashCode() {
+            int result = interfaceType != null ? interfaceType.hashCode() : 0;
+            result = 31 * result + (consumerConfig != null ? consumerConfig.hashCode() : 0);
+            return result;
+        }
     }
 
 }
