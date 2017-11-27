@@ -8,5 +8,8 @@ import com.youthlin.rpc.core.ProxyFactory;
  * 时间: 2017-11-26 15:08
  */
 public interface ConsumerConfig extends ServiceConfig {
+    /**
+     * 指定代理实现的类
+     */
     Class<? extends ProxyFactory> proxy();
 }

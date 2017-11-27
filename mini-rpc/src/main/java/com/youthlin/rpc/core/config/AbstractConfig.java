@@ -1,5 +1,6 @@
 package com.youthlin.rpc.core.config;
 
+import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -7,7 +8,7 @@ import java.util.Map;
  * 创建: youthlin.chen
  * 时间: 2017-11-26 15:08
  */
-public abstract class AbstractConfig implements Config {
+public abstract class AbstractConfig implements ServiceConfig {
     private Map<String, String> config = new HashMap<>();
 
     @Override
@@ -73,4 +74,35 @@ public abstract class AbstractConfig implements Config {
         }
         return Boolean.valueOf(value);
     }
+
+    @Override
+    public String getConfig(Method method, String key) {
+        return null;
+    }
+
+    @Override
+    public String getConfig(Method method, String key, String dft) {
+        return null;
+    }
+
+    @Override
+    public Integer getConfig(Method method, String key, int dft) {
+        return null;
+    }
+
+    @Override
+    public Long getConfig(Method method, String key, long dft) {
+        return null;
+    }
+
+    @Override
+    public Double getConfig(Method method, String key, double dft) {
+        return null;
+    }
+
+    @Override
+    public Boolean getConfig(Method method, String key, boolean dft) {
+        return null;
+    }
+
 }

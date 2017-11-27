@@ -13,5 +13,8 @@ public interface ProviderConfig extends ServiceConfig {
      */
     Class<?>[] interfaces();
 
+    /**
+     * 指定暴露服务的实现类
+     */
     Class<? extends Exporter> exporter();
 }

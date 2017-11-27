@@ -17,8 +17,23 @@ public interface ServiceConfig extends Config {
      */
     int port();
 
-    int timeout(Method method);
+    //region 顺序: async(method) -> getConfig(method, async, dft) -> getConfig(async, dft) 用第一个非 null 的
+    Integer timeout(Method method);
 
-    boolean async(Method method);
+    Boolean async(Method method);
+    //endregion
 
+    //region 如果返回 null 则使用 Config.getConfig(key, dft) 的配置
+    String getConfig(Method method, String key);
+
+    String getConfig(Method method, String key, String dft);
+
+    Integer getConfig(Method method, String key, int dft);
+
+    Long getConfig(Method method, String key, long dft);
+
+    Double getConfig(Method method, String key, double dft);
+
+    Boolean getConfig(Method method, String key, boolean dft);
+    //endregion
 }

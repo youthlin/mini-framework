@@ -23,12 +23,12 @@ public class SimpleProviderConfig extends AbstractConfig implements ProviderConf
     }
 
     @Override
-    public int timeout(Method method) {
+    public Integer timeout(Method method) {
         return Integer.MAX_VALUE;
     }
 
     @Override
-    public boolean async(Method method) {
+    public Boolean async(Method method) {
         return false;
     }
 

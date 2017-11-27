@@ -5,6 +5,8 @@ import com.youthlin.rpc.core.ProxyFactory;
 import java.lang.reflect.Method;
 
 /**
+ * 假装提供者在本机,如果不是，请至少覆盖 host, port 方法
+ * <p>
  * 创建: youthlin.chen
  * 时间: 2017-11-27 10:08
  */
@@ -19,13 +21,13 @@ public abstract class AbstractConsumerConfig extends AbstractConfig implements C
     public abstract Class<? extends ProxyFactory> proxy();
 
     @Override
-    public int timeout(Method method) {
+    public Integer timeout(Method method) {
         return Integer.MAX_VALUE;
     }
 
     @Override
-    public boolean async(Method method) {
-        return false;
+    public Boolean async(Method method) {
+        return null;
     }
 
 }

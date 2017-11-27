@@ -7,6 +7,11 @@ import java.util.Map;
  * 时间: 2017-11-26 15:08
  */
 public interface Config {
+    String ASYNC = "async";
+    String RETURN = "return";
+    String TIMEOUT = "timeout";
+    String CALLBACK = "callback";
+
     Map<String, String> getConfig();
 
     String getConfig(String key);
