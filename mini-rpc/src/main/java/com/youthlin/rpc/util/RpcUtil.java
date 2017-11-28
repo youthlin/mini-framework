@@ -1,8 +1,10 @@
 package com.youthlin.rpc.util;
 
+import com.youthlin.rpc.core.Invocation;
 import com.youthlin.rpc.core.config.Config;
 import com.youthlin.rpc.core.config.ConsumerConfig;
 
+import java.io.Serializable;
 import java.lang.reflect.Method;
 
 /**
@@ -38,6 +40,17 @@ public class RpcUtil {
             needRet = consumerConfig.getConfig(Config.RETURN, true);
         }
         return needRet;
+    }
+
+    public static boolean needReturn(Invocation invocation) {
+        if (invocation == null) {
+            return true;
+        }
+        if (invocation.ext() == null) {
+            return false;
+        }
+        Serializable needReturn = invocation.ext().get(Config.RETURN);
+        return needReturn == null || needReturn instanceof Boolean && (boolean) needReturn;
     }
 
 }

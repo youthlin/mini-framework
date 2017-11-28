@@ -1,8 +1,8 @@
 package com.youthlin.rpc.core;
 
-import com.youthlin.rpc.core.config.Config;
 import com.youthlin.rpc.core.config.ProviderConfig;
 import com.youthlin.rpc.util.NetUtil;
+import com.youthlin.rpc.util.RpcUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -111,30 +111,55 @@ public class SimpleExporter implements Exporter {
                 OutputStream outputStream = socket.getOutputStream();
                 in = new ObjectInputStream(inputStream);
                 out = new ObjectOutputStream(outputStream);
-                LOGGER.trace("read from client...");
-                Invocation invocation = (Invocation) in.readObject();
+
+                Invocation invocation = readInvocation(in);
+
+                boolean needReturn = RpcUtil.needReturn(invocation);
+                if (invocation.getException() != null) {
+                    if (needReturn) {
+                        writeInvocation(out, invocation);
+                        return;
+                    }
+                }
+
                 boolean debugEnabled = LOGGER.isDebugEnabled();
                 if (debugEnabled) {
                     LOGGER.debug("read from client: {} {}", invocation.methodName(), invocation);
                 }
-                boolean needReturn = (Boolean) invocation.ext().get(Config.RETURN);
+
                 invocation = handler(invocation);
+
                 if (debugEnabled) {
                     LOGGER.debug("after invoke: value={} ex={}", invocation.getValue(), invocation.getException());
                 }
+
                 if (needReturn) {
                     LOGGER.trace("return to client");
-                    out.writeObject(invocation);
+                    writeInvocation(out, invocation);
                 }
             } catch (IOException e) {
                 LOGGER.warn("Read from client: IOException", e);
-            } catch (ClassNotFoundException | ClassCastException e) {
-                e.printStackTrace();
             } finally {
                 LOGGER.debug("closing client... {}", socket);
                 NetUtil.close(out, in, socket);
             }
         }
+    }
+
+    private Invocation readInvocation(ObjectInputStream in) {
+        Invocation invocation;
+        try {
+            LOGGER.trace("read from client...");
+            invocation = (Invocation) in.readObject();
+        } catch (IOException | ClassNotFoundException | ClassCastException e) {
+            LOGGER.error("Read Invocation Error", e);
+            invocation = SimpleInvocation.newInvocation().setException(e);
+        }
+        return invocation;
+    }
+
+    private void writeInvocation(ObjectOutputStream out, Invocation invocation) throws IOException {
+        out.writeObject(invocation);
     }
 
     @Override

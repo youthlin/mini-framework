@@ -31,7 +31,7 @@ public class SimpleProxyFactory implements ProxyFactory {
     public <T> T newProxy(Class<T> interfaceType, ConsumerConfig consumerConfig) {
         return (T) Proxy.newProxyInstance(
                 interfaceType.getClassLoader(),
-                new Class[] { interfaceType },
+                new Class[]{interfaceType},
                 new SimpleProxy(interfaceType, consumerConfig));
     }
 
@@ -39,7 +39,7 @@ public class SimpleProxyFactory implements ProxyFactory {
         SimpleProxy.executorService = service;
     }
 
-    private static class SimpleProxy implements InvocationHandler {
+    private static class SimpleProxy extends AbstractInvocationHandler implements InvocationHandler {
         private static final Logger LOGGER = LoggerFactory.getLogger(SimpleProxyFactory.class);
         private static ExecutorService executorService = Executors.newCachedThreadPool();
         private Class<?> interfaceType;
@@ -64,28 +64,10 @@ public class SimpleProxyFactory implements ProxyFactory {
         //todo  callback
         @SuppressWarnings("unchecked")
         @Override
-        public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+        public Object handleInvocation(Object proxy, Method method, Object[] args) throws Throwable {
             //扩展, consumerConfig 里可以有注册中心的信息, 先请求注册中心拿到 这次要调用的提供者的 host, port
             String host = consumerConfig.host();
             int port = consumerConfig.port();
-
-            if (!method.getDeclaringClass().equals(interfaceType)) {//不是这个接口的方法
-                LOGGER.debug("Method {} is not of remote interface {}. invoke local.", method, interfaceType);
-                if (method.getName().equals("equals") && args.length == 1) {
-                    Object other = args[0];
-                    if (Proxy.isProxyClass(other.getClass())) {
-                        return equals(Proxy.getInvocationHandler(other));
-                    }
-                    return false;
-                }
-                if (method.getName().equals("hashCode") && method.getParameterTypes().length == 0) {
-                    return hashCode();
-                }
-                if (method.getName().equals("toString") && method.getParameterTypes().length == 0) {
-                    //... who cares then overwrite here ...
-                }
-                return method.invoke(this, args);
-            }
 
             Socket socket = null;
             ObjectOutputStream out = null;

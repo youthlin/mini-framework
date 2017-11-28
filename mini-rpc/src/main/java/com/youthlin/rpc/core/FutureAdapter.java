@@ -15,7 +15,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 @SuppressWarnings("WeakerAccess")
 public class FutureAdapter<V> implements Future<V> {
     private V value;
-    private long timeout;//ms
     private Throwable exception;
     private AtomicBoolean done = new AtomicBoolean(false);
 
@@ -27,10 +26,6 @@ public class FutureAdapter<V> implements Future<V> {
     public void setException(Throwable exception) {
         this.exception = exception;
         done.set(true);
-    }
-
-    public void setTimeout(long timeout) {
-        this.timeout = timeout;
     }
 
     @Override
@@ -51,29 +46,34 @@ public class FutureAdapter<V> implements Future<V> {
     @Override
     public V get() throws InterruptedException, ExecutionException {
         while (!done.get()) {//自旋等待
-            //异常了
-            if (exception != null) {
-                throw new ExecutionException(exception);
-            }
+            checkException();//异常了
         }
+        checkException();
         return value;
     }
 
     @Override
     public V get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException {
-        long nanos = unit.toNanos(timeout);
+        long nanosTimeout = unit.toNanos(timeout);
         long start = System.nanoTime();
         while (!done.get()) {//自旋等待
-            //异常了
-            if (exception != null) {
-                throw new ExecutionException(exception);
-            }
-            //超时了
-            if (System.nanoTime() - start > nanos) {
-                throw new TimeoutException(timeout + " " + unit);
-            }
+            checkException();//异常了
+            checkTimeout(timeout, unit, start, nanosTimeout);//超时了
         }
+        checkException();
+        checkTimeout(timeout, unit, start, nanosTimeout);//超时了
         return value;
     }
 
+    private void checkException() throws ExecutionException {
+        if (exception != null) {
+            throw new ExecutionException(exception);
+        }
+    }
+
+    private void checkTimeout(long timeout, TimeUnit unit, long startNanos, long nanosTimeout) throws TimeoutException {
+        if (System.nanoTime() - startNanos > nanosTimeout) {
+            throw new TimeoutException(timeout + " " + unit.toString().toLowerCase());
+        }
+    }
 }
