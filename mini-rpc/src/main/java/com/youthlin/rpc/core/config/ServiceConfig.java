@@ -35,5 +35,7 @@ public interface ServiceConfig extends Config {
     Double getConfig(Method method, String key, double dft);
 
     Boolean getConfig(Method method, String key, boolean dft);
+
+    <T> T getConfig(Method method, String key, T dft);
     //endregion
 }

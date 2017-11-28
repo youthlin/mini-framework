@@ -24,8 +24,6 @@ import java.util.Set;
  */
 public class RpcPreScanner implements IPreScanner {
     private static final Logger LOGGER = LoggerFactory.getLogger(RpcPreScanner.class);
-    private static final SimpleProxyFactory SIMPLE_PROXY_FACTORY = new SimpleProxyFactory();
-    private static final SimpleConsumerConfig SIMPLE_CONSUMER_CONFIG = new SimpleConsumerConfig();
     private static final Map<Class<?>, Object> CACHE = new HashMap<>();
 
     @Override
@@ -62,8 +60,8 @@ public class RpcPreScanner implements IPreScanner {
         ConsumerConfig consumerConfig;
         Class<? extends ServiceConfig> configClass = rpc.config();
         if (configClass.equals(ServiceConfig.class)) {//没有配置 默认认为是本机
-            proxyFactory = SIMPLE_PROXY_FACTORY;
-            consumerConfig = SIMPLE_CONSUMER_CONFIG;
+            proxyFactory = SimpleProxyFactory.INSTANCE;
+            consumerConfig = SimpleConsumerConfig.INSTANCE;
         } else {
             if (!ConsumerConfig.class.isAssignableFrom(configClass)) {
                 throw new IllegalArgumentException(

@@ -1,6 +1,10 @@
 package com.youthlin.rpc.core;
 
+import com.youthlin.ioc.annotation.AnnotationUtil;
+import com.youthlin.rpc.core.config.Config;
+import com.youthlin.rpc.core.config.ConsumerConfig;
 import com.youthlin.rpc.core.config.ProviderConfig;
+import com.youthlin.rpc.core.config.SimpleConsumerConfig;
 import com.youthlin.rpc.util.NetUtil;
 import com.youthlin.rpc.util.RpcUtil;
 import org.slf4j.Logger;
@@ -11,6 +15,7 @@ import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.OutputStream;
+import java.io.Serializable;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.InetAddress;
@@ -18,8 +23,10 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -28,6 +35,7 @@ import java.util.concurrent.Executors;
  * 时间: 2017-11-26 16:45
  */
 public class SimpleExporter implements Exporter {
+    public static final SimpleExporter INSTANCE = new SimpleExporter();
     private static final Logger LOGGER = LoggerFactory.getLogger(SimpleExporter.class);
     private Map<Class<?>, Object> instanceMap = new HashMap<>();
     private Map<Key, ServerSocket> serverSocketMap = new HashMap<>();
@@ -94,6 +102,21 @@ public class SimpleExporter implements Exporter {
         }
     }
 
+    @Override
+    public void unExport(ProviderConfig providerConfig, Object instance) {
+        Class<?>[] interfaces = providerConfig.interfaces();
+        if (interfaces == null || interfaces.length == 0) {
+            interfaces = instance.getClass().getInterfaces();
+        }
+        for (Class<?> anInterface : interfaces) {
+            instanceMap.remove(anInterface);
+        }
+        String host = providerConfig.host();
+        int port = providerConfig.port();
+        Key key = new Key(host, port);
+        serverSocketMap.remove(key);
+    }
+
     private class Handler implements Runnable {
         private Socket socket;
 
@@ -139,6 +162,8 @@ public class SimpleExporter implements Exporter {
                 }
             } catch (IOException e) {
                 LOGGER.warn("Read from client: IOException", e);
+            } catch (Throwable t) {
+                LOGGER.error("Unhandled Exception", t);
             } finally {
                 LOGGER.debug("closing client... {}", socket);
                 NetUtil.close(out, in, socket);
@@ -167,7 +192,8 @@ public class SimpleExporter implements Exporter {
         Class<?> invokeInterface = invocation.invokeInterface();
         String methodName = invocation.methodName();
         Class<?>[] argsType = invocation.argsType();
-        Object[] args = invocation.args();
+        Object[] args = processArgs(invocation);
+
         Object instance = instanceMap.get(invokeInterface);
         Class<?> instanceClass = instance.getClass();
         Method[] methods = instanceClass.getMethods();
@@ -179,6 +205,7 @@ public class SimpleExporter implements Exporter {
                 if (Objects.equals(methodName, method.getName()) && Arrays
                         .equals(argsType, method.getParameterTypes())) {
                     found = true;
+                    method.setAccessible(true);
                     Object invoke = method.invoke(instance, args);
                     result.setValue(invoke);
                     break;
@@ -195,6 +222,39 @@ public class SimpleExporter implements Exporter {
             result.setException(new NoSuchMethodException(methodName));
         }
         return result;
+    }
+
+    private Object[] processArgs(Invocation invocation) {
+        Object[] args = invocation.args();
+        Serializable callbackConfig = invocation.ext().get(Config.CALLBACK);
+        boolean[] callback = (boolean[]) callbackConfig;
+        if (callback != null) {
+            Class<?>[] argsType = invocation.argsType();
+            if (callback.length != argsType.length) {
+                throw new IllegalArgumentException("callback config " + callback.length + " != " + argsType.length + " parameters");
+            }
+            for (int i = 0; i < callback.length; i++) {
+                if (callback[i]) {
+                    args[i] = refer(invocation, i);
+                }
+            }
+        }
+        return args;
+    }
+
+    private Object refer(Invocation invocation, int index) {
+        Serializable serializable = invocation.ext().get(Config.CONSUMER_CONFIG);
+        ConsumerConfig consumerConfig = ((ConsumerConfig[]) serializable)[index];
+        LOGGER.debug("refer from {}:{}", consumerConfig.host(), consumerConfig.port());
+        Class<? extends ProxyFactory> proxy = consumerConfig.proxy();
+        ProxyFactory proxyImpl = SimpleProxyFactory.INSTANCE;
+        if (!proxy.equals(SimpleProxyFactory.class)) {
+            proxyImpl = AnnotationUtil.newInstance(proxy);
+        }
+        if (proxyImpl == null) {
+            throw new IllegalArgumentException("Can not get ProxyFactory instance. " + proxy);
+        }
+        return proxyImpl.newProxy(invocation.argsType()[index], consumerConfig);
     }
 
 }

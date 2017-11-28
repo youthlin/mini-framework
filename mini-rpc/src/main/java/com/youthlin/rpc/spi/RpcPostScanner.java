@@ -22,7 +22,6 @@ import java.util.Map;
 public class RpcPostScanner implements IPostScanner {
     private static final Logger LOGGER = LoggerFactory.getLogger(RpcPostScanner.class);
     private static final SimpleProviderConfig SIMPLE_PROVIDER_CONFIG = new SimpleProviderConfig();
-    private static final SimpleExporter SIMPLE_EXPORTER = new SimpleExporter();
 
     @Override
     public void postScanner(Context context) {
@@ -41,7 +40,7 @@ public class RpcPostScanner implements IPostScanner {
                 Exporter exporterImpl;
                 if (config.equals(ServiceConfig.class)) {//没有配置
                     providerConfig = SIMPLE_PROVIDER_CONFIG;
-                    exporterImpl = SIMPLE_EXPORTER;
+                    exporterImpl = SimpleExporter.INSTANCE;
                 } else {
                     if (!ProviderConfig.class.isAssignableFrom(config)) {
                         LOGGER.warn("Service config should be a sub class of ProviderConfig on Provider Side. {}", rpc);

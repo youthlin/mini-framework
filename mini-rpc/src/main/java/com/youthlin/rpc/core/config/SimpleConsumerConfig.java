@@ -15,14 +15,28 @@ import java.lang.reflect.Method;
  * 时间: 2017-11-26 15:31
  */
 public class SimpleConsumerConfig extends AbstractConsumerConfig implements ConsumerConfig {
+    public static final SimpleConsumerConfig INSTANCE = new SimpleConsumerConfig();
+    private String host = NetUtil.LOCALHOST;
+    private int port = NetUtil.DEFAULT_PORT;
+
+    public SimpleConsumerConfig setHost(String host) {
+        this.host = host;
+        return this;
+    }
+
+    public SimpleConsumerConfig setPort(int port) {
+        this.port = port;
+        return this;
+    }
+
     @Override
     public String host() {
-        return NetUtil.LOCALHOST;
+        return host;
     }
 
     @Override
     public int port() {
-        return NetUtil.DEFAULT_PORT;
+        return port;
     }
 
     @Override

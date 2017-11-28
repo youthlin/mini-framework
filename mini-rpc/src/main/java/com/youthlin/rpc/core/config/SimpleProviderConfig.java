@@ -12,14 +12,28 @@ import java.lang.reflect.Method;
  * 时间: 2017-11-26 15:31
  */
 public class SimpleProviderConfig extends AbstractConfig implements ProviderConfig {
+    public static final SimpleProviderConfig INSTANCE = new SimpleProviderConfig();
+    private String host = NetUtil.ANY_HOST;
+    private int port = NetUtil.getAvailablePort(NetUtil.DEFAULT_PORT);
+
+    public SimpleProviderConfig setHost(String host) {
+        this.host = host;
+        return this;
+    }
+
+    public SimpleProviderConfig setPort(int port) {
+        this.port = port;
+        return this;
+    }
+
     @Override
     public String host() {
-        return NetUtil.ANY_HOST;
+        return host;
     }
 
     @Override
     public int port() {
-        return NetUtil.getAvailablePort(NetUtil.DEFAULT_PORT);
+        return port;
     }
 
     @Override

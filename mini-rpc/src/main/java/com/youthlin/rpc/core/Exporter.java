@@ -14,6 +14,8 @@ public interface Exporter {
      */
     void export(ProviderConfig providerConfig, Object instance);
 
+    void unExport(ProviderConfig providerConfig, Object instance);
+
     /**
      * @param invocation 请求需要包含 uid, interfaceType, methodName, argsType[], args[],
      * @return 响应需要包含 uid, value, exception(如果异常)

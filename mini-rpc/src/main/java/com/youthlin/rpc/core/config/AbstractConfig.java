@@ -105,4 +105,8 @@ public abstract class AbstractConfig implements ServiceConfig {
         return null;
     }
 
+    @Override
+    public <T> T getConfig(Method method, String key, T dft) {
+        return null;
+    }
 }

@@ -194,10 +194,11 @@ public class AnnotationUtil {
         }
     }
 
-    public static Object newInstance(Class<?> clazz) {
+    @SuppressWarnings("unchecked")
+    public static <T> T newInstance(Class<?> clazz) {
         try {
             if (shouldNewInstance(clazz)) {
-                return clazz.newInstance();
+                return (T) clazz.newInstance();
             }
         } catch (ReflectiveOperationException ignore) {
         }

@@ -3,20 +3,27 @@ package com.youthlin.rpc.core;
 import com.youthlin.ioc.annotation.AnnotationUtil;
 import com.youthlin.rpc.core.config.Config;
 import com.youthlin.rpc.core.config.ConsumerConfig;
+import com.youthlin.rpc.core.config.ProviderConfig;
+import com.youthlin.rpc.core.config.SimpleConsumerConfig;
+import com.youthlin.rpc.core.config.SimpleProviderConfig;
 import com.youthlin.rpc.util.NetUtil;
 import com.youthlin.rpc.util.RpcUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import sun.nio.ch.Net;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.OutputStream;
+import java.io.Serializable;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.net.Socket;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -27,6 +34,8 @@ import java.util.concurrent.TimeUnit;
  * 时间: 2017-11-26 17:38
  */
 public class SimpleProxyFactory implements ProxyFactory {
+    public static SimpleProxyFactory INSTANCE = new SimpleProxyFactory();
+
     @SuppressWarnings("unchecked")
     @Override
     public <T> T newProxy(Class<T> interfaceType, ConsumerConfig consumerConfig) {
@@ -73,6 +82,7 @@ public class SimpleProxyFactory implements ProxyFactory {
             Socket socket = null;
             ObjectOutputStream out = null;
             ObjectInputStream in = null;
+            LinkedList<Temp> list = null;
             boolean needReturn = RpcUtil.needReturn(consumerConfig, method);
             try {
                 socket = new Socket(host, port);
@@ -85,13 +95,17 @@ public class SimpleProxyFactory implements ProxyFactory {
                 final ObjectInputStream fin = in;
                 final ObjectOutputStream fout = out;
                 Class<?> returnType = method.getReturnType();
-                SimpleInvocation invocation = SimpleInvocation.newInvocation()
-                        .setInvokeInterface(interfaceType)
+                Object[] orginalArgs = args;
+                SimpleInvocation invocation = SimpleInvocation.newInvocation();
+                invocation.setInvokeInterface(interfaceType)
                         .setReturnType(returnType)
                         .setMethodName(method.getName())
                         .setArgsType(method.getParameterTypes())
-                        .setArgs(args)
+                        .setArgs(processArgs(invocation, method, args))
                         .ext(Config.RETURN, needReturn);
+
+                list = (LinkedList<Temp>) invocation.ext().remove(Config.TEMP);
+                final LinkedList<Temp> flist = list;
 
                 out.writeObject(invocation);
 
@@ -113,6 +127,11 @@ public class SimpleProxyFactory implements ProxyFactory {
                             futureAdapter.setException(t);
                         } finally {
                             NetUtil.close(fin, fout, fs);
+//                            if (flist != null) {
+//                                for (Temp temp : flist) {
+//                                    temp.exporter.unExport(temp.providerConfig, temp.instance);
+//                                }
+//                            }
                         }
                     }
                 });
@@ -130,6 +149,11 @@ public class SimpleProxyFactory implements ProxyFactory {
             } finally {
                 if (!needReturn) {
                     NetUtil.close(in, out, socket);
+                    if (list != null) {
+                        for (Temp temp : list) {
+                            temp.exporter.unExport(temp.providerConfig, temp.instance);
+                        }
+                    }
                 }
             }
         }
@@ -156,6 +180,67 @@ public class SimpleProxyFactory implements ProxyFactory {
             if (futureAdapter != null) {
                 futureAdapter.setValue(value);
             }
+        }
+
+        private Object[] processArgs(Invocation invocation, Method method, Object[] args) {
+            if (method.getParameterTypes().length == 0) {
+                return RpcUtil.EMPTY_ARRAY;
+            }
+            boolean[] callback = RpcUtil.callback(consumerConfig, method);
+            ConsumerConfig[] consumerConfigs = new ConsumerConfig[method.getParameterTypes().length];
+            if (callback != null) {
+                invocation.ext().put(Config.CALLBACK, callback);
+                for (int i = 0; i < callback.length; i++) {
+                    if (callback[i]) {
+                        ProviderConfig providerConfig = export(invocation, method, i, args[i]);
+                        consumerConfigs[i] = new SimpleConsumerConfig()
+                                .setPort(providerConfig.port())
+                                .setHost(NetUtil.getLocalAddress().getHostAddress());
+                        args[i] = null;
+                    }
+                }
+            }
+            invocation.ext().put(Config.CONSUMER_CONFIG, consumerConfigs);
+            return args;
+        }
+
+        private static class Temp implements Serializable {
+            ProviderConfig providerConfig;
+            Exporter exporter;
+            Object instance;
+        }
+
+        private ProviderConfig export(Invocation invocation, Method method, int index, Object arg) {
+            LOGGER.debug("callback: {} {} {}", method, index, arg);
+            ProviderConfig providerConfig = SimpleProviderConfig.INSTANCE;
+            ProviderConfig[] providerConfigs = RpcUtil.providerConfigOfCallbackParameter(consumerConfig, method);
+            if (providerConfigs != null) {
+                providerConfig = providerConfigs[index];
+            }
+            Class<? extends Exporter> exporter = providerConfig.exporter();
+            Exporter exporterImpl = SimpleExporter.INSTANCE;
+            if (!exporter.equals(SimpleExporter.class)) {
+                exporterImpl = AnnotationUtil.newInstance(exporter);
+            }
+            if (exporterImpl == null) {
+                throw new IllegalArgumentException("Can not get exporter instance. " + exporter);
+            }
+            exporterImpl.export(providerConfig, arg);
+
+            Temp temp = new Temp();
+            temp.providerConfig = providerConfig;
+            temp.exporter = exporterImpl;
+            temp.instance = arg;
+            @SuppressWarnings("unchecked")
+            LinkedList<Temp> list = (LinkedList<Temp>) invocation.ext().get(Config.TEMP);
+            if (list == null) {
+                list = new LinkedList<>();
+            }
+            list.add(temp);
+            invocation.ext().put(Config.TEMP, list);
+
+            LOGGER.debug("callback export at {}", providerConfig);
+            return providerConfig;
         }
 
         @Override
