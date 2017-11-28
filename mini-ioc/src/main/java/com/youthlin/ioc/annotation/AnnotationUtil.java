@@ -90,14 +90,14 @@ public class AnnotationUtil {
         LOGGER.debug("scan url = {}", url);
         String protocol = url.getProtocol();
         switch (protocol) {
-        case "file":
-            classNames.addAll(getClassNamesFromFileSystem(basePackage, url));
-            break;
-        case "jar":
-            classNames.addAll(getClassNamesFromJar(basePackage, url));
-            break;
-        default:
-            LOGGER.warn("unknown protocol. [{}]", protocol);
+            case "file":
+                classNames.addAll(getClassNamesFromFileSystem(basePackage, url));
+                break;
+            case "jar":
+                classNames.addAll(getClassNamesFromJar(basePackage, url));
+                break;
+            default:
+                LOGGER.warn("unknown protocol. [{}]", protocol);
         }
         return classNames;
     }
@@ -230,6 +230,30 @@ public class AnnotationUtil {
             }
         }
         return ann;
+    }
+
+    @SuppressWarnings("unchecked")
+    public static <T> T getDefaultValueOf(Class<T> clazz) {
+        if (clazz.isPrimitive()) {
+            if (clazz.equals(int.class)) {
+                return (T) Integer.valueOf(0);
+            } else if (clazz.equals(float.class)) {
+                return (T) Float.valueOf(0);
+            } else if (clazz.equals(double.class)) {
+                return (T) Double.valueOf(0);
+            } else if (clazz.equals(long.class)) {
+                return (T) Long.valueOf(0);
+            } else if (clazz.equals(char.class)) {
+                return (T) Character.valueOf((char) 0);
+            } else if (clazz.equals(byte.class)) {
+                return (T) Byte.valueOf((byte) 0);
+            } else if (clazz.equals(short.class)) {
+                return (T) Short.valueOf((short) 0);
+            } else if (clazz.equals(boolean.class)) {
+                return (T) Boolean.FALSE;
+            }//void
+        }
+        return null;
     }
 
     /**

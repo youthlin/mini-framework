@@ -1,5 +1,6 @@
 package com.youthlin.rpc.core;
 
+import com.youthlin.ioc.annotation.AnnotationUtil;
 import com.youthlin.rpc.core.config.Config;
 import com.youthlin.rpc.core.config.ConsumerConfig;
 import com.youthlin.rpc.util.NetUtil;
@@ -95,7 +96,7 @@ public class SimpleProxyFactory implements ProxyFactory {
                 out.writeObject(invocation);
 
                 if (!needReturn) {
-                    return null;//不需要返回结果
+                    return AnnotationUtil.getDefaultValueOf(returnType);//不需要返回结果
                 }
 
                 long timeout = RpcUtil.getTimeOut(consumerConfig, method);
