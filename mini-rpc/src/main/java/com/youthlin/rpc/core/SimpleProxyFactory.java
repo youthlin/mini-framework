@@ -95,7 +95,6 @@ public class SimpleProxyFactory implements ProxyFactory {
                 final ObjectInputStream fin = in;
                 final ObjectOutputStream fout = out;
                 Class<?> returnType = method.getReturnType();
-                Object[] orginalArgs = args;
                 SimpleInvocation invocation = SimpleInvocation.newInvocation();
                 invocation.setInvokeInterface(interfaceType)
                         .setReturnType(returnType)
@@ -127,11 +126,13 @@ public class SimpleProxyFactory implements ProxyFactory {
                             futureAdapter.setException(t);
                         } finally {
                             NetUtil.close(fin, fout, fs);
-//                            if (flist != null) {
-//                                for (Temp temp : flist) {
-//                                    temp.exporter.unExport(temp.providerConfig, temp.instance);
-//                                }
-//                            }
+                            if (flist != null) {
+                                for (Temp temp : flist) {
+                                    temp.exporter.unExport(temp.providerConfig, temp.instance,
+                                            2 * consumerConfig.getConfig(Config.TIMEOUT, 6000),
+                                            TimeUnit.MILLISECONDS);
+                                }
+                            }
                         }
                     }
                 });
@@ -151,7 +152,9 @@ public class SimpleProxyFactory implements ProxyFactory {
                     NetUtil.close(in, out, socket);
                     if (list != null) {
                         for (Temp temp : list) {
-                            temp.exporter.unExport(temp.providerConfig, temp.instance);
+                            temp.exporter.unExport(temp.providerConfig, temp.instance,
+                                    2 * consumerConfig.getConfig(Config.TIMEOUT, 6000),
+                                    TimeUnit.MILLISECONDS);
                         }
                     }
                 }

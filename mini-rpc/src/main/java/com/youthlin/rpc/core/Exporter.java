@@ -2,6 +2,8 @@ package com.youthlin.rpc.core;
 
 import com.youthlin.rpc.core.config.ProviderConfig;
 
+import java.util.concurrent.TimeUnit;
+
 /**
  * 提供者与消费者通信的代理
  * 创建: youthlin.chen
@@ -14,7 +16,7 @@ public interface Exporter {
      */
     void export(ProviderConfig providerConfig, Object instance);
 
-    void unExport(ProviderConfig providerConfig, Object instance);
+    void unExport(ProviderConfig providerConfig, Object instance, long delay, TimeUnit unit);
 
     /**
      * @param invocation 请求需要包含 uid, interfaceType, methodName, argsType[], args[],

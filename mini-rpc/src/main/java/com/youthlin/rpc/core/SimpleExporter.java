@@ -27,8 +27,10 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 /**
  * 创建: youthlin.chen
@@ -37,8 +39,8 @@ import java.util.concurrent.Executors;
 public class SimpleExporter implements Exporter {
     public static final SimpleExporter INSTANCE = new SimpleExporter();
     private static final Logger LOGGER = LoggerFactory.getLogger(SimpleExporter.class);
-    private Map<Class<?>, Object> instanceMap = new HashMap<>();
-    private Map<Key, ServerSocket> serverSocketMap = new HashMap<>();
+    private Map<Class<?>, Object> instanceMap = new ConcurrentHashMap<>();
+    private Map<Key, ServerSocket> serverSocketMap = new ConcurrentHashMap<>();
     private ExecutorService executorService = Executors.newCachedThreadPool();
 
     {
@@ -103,18 +105,30 @@ public class SimpleExporter implements Exporter {
     }
 
     @Override
-    public void unExport(ProviderConfig providerConfig, Object instance) {
-        Class<?>[] interfaces = providerConfig.interfaces();
-        if (interfaces == null || interfaces.length == 0) {
-            interfaces = instance.getClass().getInterfaces();
-        }
-        for (Class<?> anInterface : interfaces) {
-            instanceMap.remove(anInterface);
-        }
-        String host = providerConfig.host();
-        int port = providerConfig.port();
-        Key key = new Key(host, port);
-        serverSocketMap.remove(key);
+    public void unExport(final ProviderConfig providerConfig, final Object instance,
+            final long delay, final TimeUnit unit) {
+        LOGGER.debug("unExport service after {} {}: {}", delay, unit, instance.getClass());
+        executorService.submit(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    Thread.sleep(unit.toMillis(delay));
+                } catch (InterruptedException ignore) {
+                }
+                Class<?>[] interfaces = providerConfig.interfaces();
+                if (interfaces == null || interfaces.length == 0) {
+                    interfaces = instance.getClass().getInterfaces();
+                }
+                for (Class<?> anInterface : interfaces) {
+                    instanceMap.remove(anInterface);
+                }
+                String host = providerConfig.host();
+                int port = providerConfig.port();
+                Key key = new Key(host, port);
+                serverSocketMap.remove(key);
+                LOGGER.debug("{} unExported", instance.getClass());
+            }
+        });
     }
 
     private class Handler implements Runnable {
