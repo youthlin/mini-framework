@@ -8,6 +8,7 @@ import javax.annotation.Resource;
 import java.io.File;
 import java.io.FileFilter;
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.Field;
@@ -18,6 +19,7 @@ import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.net.URLDecoder;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Enumeration;
@@ -36,6 +38,7 @@ import java.util.jar.JarFile;
 @SuppressWarnings("WeakerAccess")
 public class AnnotationUtil {
     private static final Logger LOGGER = LoggerFactory.getLogger(AnnotationUtil.class);
+    private static final String UTF_8 = "UTF-8";
     private static final String FORWARD_CHAR = "/";
     private static final String META_INF = "META-INF";
     private static final String DOT_CLASS = ".class";
@@ -148,6 +151,10 @@ public class AnnotationUtil {
             basePackage = "";
         }
         String jarFileName = url.toString();
+        try {
+            jarFileName = URLDecoder.decode(jarFileName, UTF_8);
+        } catch (UnsupportedEncodingException ignore) {
+        }
         jarFileName = jarFileName.replace("%20", " ");
         jarFileName = jarFileName.substring("jar:file:".length());
         int indexOf = jarFileName.indexOf("!/");
