@@ -160,8 +160,8 @@ public class AnnotationUtil {
             while (entries.hasMoreElements()) {
                 JarEntry jarEntry = entries.nextElement();
                 String name = jarEntry.getName();
+                name = name.replace("/", DOT);//jar 内都是 /
                 if (name.endsWith(DOT_CLASS) && !name.contains(DOLLAR) && name.startsWith(basePackage)) {
-                    name = name.replace("/", DOT);//jar 内都是 /
                     name = name.substring(0, name.lastIndexOf(DOT_CLASS));
                     classNames.add(name);
                 }
