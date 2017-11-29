@@ -7,7 +7,7 @@ import java.util.Map;
  * 创建: youthlin.chen
  * 时间: 2017-11-26 15:08
  */
-public interface Config extends Serializable{
+public interface Config extends Serializable {
     String TEMP = "temp";
     String ASYNC = "async";
     String RETURN = "return";
@@ -15,6 +15,7 @@ public interface Config extends Serializable{
     String CALLBACK = "callback";
     String PROVIDER_CONFIG = "providerConfig";
     String CONSUMER_CONFIG = "consumerConfig";
+    String CALLBACK_TIMEOUT = "callbackTimeout";
 
     Map<String, String> getConfig();
 

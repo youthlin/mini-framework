@@ -4,7 +4,6 @@ import com.youthlin.ioc.annotation.AnnotationUtil;
 import com.youthlin.rpc.core.config.Config;
 import com.youthlin.rpc.core.config.ConsumerConfig;
 import com.youthlin.rpc.core.config.ProviderConfig;
-import com.youthlin.rpc.core.config.SimpleConsumerConfig;
 import com.youthlin.rpc.util.NetUtil;
 import com.youthlin.rpc.util.RpcUtil;
 import org.slf4j.Logger;
@@ -22,11 +21,8 @@ import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.Arrays;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -126,7 +122,7 @@ public class SimpleExporter implements Exporter {
                 int port = providerConfig.port();
                 Key key = new Key(host, port);
                 serverSocketMap.remove(key);
-                LOGGER.debug("{} unExported", instance.getClass());
+                LOGGER.debug("unExported {}", instance.getClass());
             }
         });
     }

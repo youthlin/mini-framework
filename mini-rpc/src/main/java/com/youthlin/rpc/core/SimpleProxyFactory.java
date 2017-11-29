@@ -10,7 +10,6 @@ import com.youthlin.rpc.util.NetUtil;
 import com.youthlin.rpc.util.RpcUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import sun.nio.ch.Net;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -82,7 +81,7 @@ public class SimpleProxyFactory implements ProxyFactory {
             Socket socket = null;
             ObjectOutputStream out = null;
             ObjectInputStream in = null;
-            LinkedList<Temp> list = null;
+            LinkedList<CallbackPair> list = null;
             boolean needReturn = RpcUtil.needReturn(consumerConfig, method);
             try {
                 socket = new Socket(host, port);
@@ -103,8 +102,8 @@ public class SimpleProxyFactory implements ProxyFactory {
                         .setArgs(processArgs(invocation, method, args))
                         .ext(Config.RETURN, needReturn);
 
-                list = (LinkedList<Temp>) invocation.ext().remove(Config.TEMP);
-                final LinkedList<Temp> flist = list;
+                list = (LinkedList<CallbackPair>) invocation.ext().remove(Config.TEMP);
+                final LinkedList<CallbackPair> flist = list;
 
                 out.writeObject(invocation);
 
@@ -126,13 +125,7 @@ public class SimpleProxyFactory implements ProxyFactory {
                             futureAdapter.setException(t);
                         } finally {
                             NetUtil.close(fin, fout, fs);
-                            if (flist != null) {
-                                for (Temp temp : flist) {
-                                    temp.exporter.unExport(temp.providerConfig, temp.instance,
-                                            2 * consumerConfig.getConfig(Config.TIMEOUT, 6000),
-                                            TimeUnit.MILLISECONDS);
-                                }
-                            }
+                            unExport(flist);
                         }
                     }
                 });
@@ -150,13 +143,7 @@ public class SimpleProxyFactory implements ProxyFactory {
             } finally {
                 if (!needReturn) {
                     NetUtil.close(in, out, socket);
-                    if (list != null) {
-                        for (Temp temp : list) {
-                            temp.exporter.unExport(temp.providerConfig, temp.instance,
-                                    2 * consumerConfig.getConfig(Config.TIMEOUT, 6000),
-                                    TimeUnit.MILLISECONDS);
-                        }
-                    }
+                    unExport(list);
                 }
             }
         }
@@ -207,10 +194,19 @@ public class SimpleProxyFactory implements ProxyFactory {
             return args;
         }
 
-        private static class Temp implements Serializable {
+        private static class CallbackPair implements Serializable {
             ProviderConfig providerConfig;
             Exporter exporter;
             Object instance;
+
+            @Override
+            public String toString() {
+                return "CallbackPair{" +
+                        "providerConfig=" + providerConfig +
+                        ", exporter=" + exporter +
+                        ", instance=" + instance +
+                        '}';
+            }
         }
 
         private ProviderConfig export(Invocation invocation, Method method, int index, Object arg) {
@@ -230,20 +226,33 @@ public class SimpleProxyFactory implements ProxyFactory {
             }
             exporterImpl.export(providerConfig, arg);
 
-            Temp temp = new Temp();
-            temp.providerConfig = providerConfig;
-            temp.exporter = exporterImpl;
-            temp.instance = arg;
+            CallbackPair callbackPair = new CallbackPair();
+            callbackPair.providerConfig = providerConfig;
+            callbackPair.exporter = exporterImpl;
+            callbackPair.instance = arg;
             @SuppressWarnings("unchecked")
-            LinkedList<Temp> list = (LinkedList<Temp>) invocation.ext().get(Config.TEMP);
+            LinkedList<CallbackPair> list = (LinkedList<CallbackPair>) invocation.ext().get(Config.TEMP);
             if (list == null) {
                 list = new LinkedList<>();
             }
-            list.add(temp);
+            list.add(callbackPair);
             invocation.ext().put(Config.TEMP, list);
 
             LOGGER.debug("callback export at {}", providerConfig);
             return providerConfig;
+        }
+
+        private void unExport(List<CallbackPair> list) {
+            if (list != null) {
+                for (CallbackPair callbackPair : list) {
+                    try {
+                        callbackPair.exporter.unExport(callbackPair.providerConfig, callbackPair.instance,
+                                consumerConfig.getConfig(Config.CALLBACK_TIMEOUT, 6000), TimeUnit.MILLISECONDS);
+                    } catch (Exception e) {
+                        LOGGER.warn("Error when unExport callback service. {}", callbackPair, e);
+                    }
+                }
+            }
         }
 
         @Override
