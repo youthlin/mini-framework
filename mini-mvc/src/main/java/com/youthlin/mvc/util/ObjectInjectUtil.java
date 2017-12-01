@@ -218,7 +218,7 @@ public class ObjectInjectUtil {
      * This method relies on the constructor's class loader to locate the
      * bytecode resource that defined its class.
      *
-     * @link https://github.com/danidemi/poc-attribute-names-with-java-and-asm/blob/master/src/main/java/com/danidemi/poc/ArgumentReflection.java
+     * @see <a href="https://github.com/danidemi/poc-attribute-names-with-java-and-asm/blob/master/src/main/java/com/danidemi/poc/ArgumentReflection.java">https://github.com/danidemi/poc-attribute-names-with-java-and-asm/blob/master/src/main/java/com/danidemi/poc/ArgumentReflection.java</a>
      */
     public static String[] getParameterNames(Method theMethod) throws IOException {
         Class<?> declaringClass = theMethod.getDeclaringClass();
