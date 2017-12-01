@@ -40,7 +40,7 @@ public class SimpleProxyFactory implements ProxyFactory {
     public <T> T newProxy(Class<T> interfaceType, ConsumerConfig consumerConfig) {
         return (T) Proxy.newProxyInstance(
                 interfaceType.getClassLoader(),
-                new Class[]{interfaceType},
+                new Class[] { interfaceType },
                 new SimpleProxy(interfaceType, consumerConfig));
     }
 
@@ -55,14 +55,16 @@ public class SimpleProxyFactory implements ProxyFactory {
         private ConsumerConfig consumerConfig;
 
         static {
-            Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
+            Thread hook = new Thread(new Runnable() {
                 @Override
                 public void run() {
                     LOGGER.info("shutting down....");
                     executorService.shutdown();
                     LOGGER.info("shutdown success.");
                 }
-            }));
+            });
+            hook.setName("ProxyShutDownHook");
+            Runtime.getRuntime().addShutdownHook(hook);
         }
 
         private SimpleProxy(Class<?> interfaceType, ConsumerConfig consumerConfig) {
@@ -70,11 +72,10 @@ public class SimpleProxyFactory implements ProxyFactory {
             this.consumerConfig = consumerConfig;
         }
 
-        //todo  callback
         @SuppressWarnings("unchecked")
         @Override
         public Object handleInvocation(Object proxy, Method method, Object[] args) throws Throwable {
-            //扩展, consumerConfig 里可以有注册中心的信息, 先请求注册中心拿到 这次要调用的提供者的 host, port
+            //扩展, consumerConfig 里可以有注册中心的信息, 先请求注册中心拿到这次要调用的提供者的 host, port
             String host = consumerConfig.host();
             int port = consumerConfig.port();
 
@@ -84,6 +85,7 @@ public class SimpleProxyFactory implements ProxyFactory {
             LinkedList<CallbackPair> list = null;
             boolean needReturn = RpcUtil.needReturn(consumerConfig, method);
             try {
+                //t/o/d/o// use NIO
                 socket = new Socket(host, port);
                 LOGGER.debug("Connect to provider {}", socket);
                 OutputStream outputStream = socket.getOutputStream();
@@ -131,7 +133,7 @@ public class SimpleProxyFactory implements ProxyFactory {
                 });
 
                 if (RpcUtil.async(consumerConfig, method)) {
-                    return null;//立即返回
+                    return AnnotationUtil.getDefaultValueOf(returnType);//立即返回
                 }
                 return futureAdapter.get(timeout, TimeUnit.MILLISECONDS);
             } catch (Throwable t) {
@@ -264,6 +266,7 @@ public class SimpleProxyFactory implements ProxyFactory {
 
             SimpleProxy that = (SimpleProxy) o;
 
+            //noinspection SimplifiableIfStatement
             if (interfaceType != null ? !interfaceType.equals(that.interfaceType) : that.interfaceType != null)
                 return false;
             return consumerConfig != null ? consumerConfig.equals(that.consumerConfig) : that.consumerConfig == null;

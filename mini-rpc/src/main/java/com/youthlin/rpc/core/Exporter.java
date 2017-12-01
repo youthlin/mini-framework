@@ -18,10 +18,4 @@ public interface Exporter {
 
     void unExport(ProviderConfig providerConfig, Object instance, long delay, TimeUnit unit);
 
-    /**
-     * @param invocation 请求需要包含 uid, interfaceType, methodName, argsType[], args[],
-     * @return 响应需要包含 uid, value, exception(如果异常)
-     */
-    Invocation handler(Invocation invocation);
-
 }

@@ -32,27 +32,81 @@ import java.util.concurrent.TimeUnit;
  * 创建: youthlin.chen
  * 时间: 2017-11-26 16:45
  */
+@SuppressWarnings("WeakerAccess")
 public class SimpleExporter implements Exporter {
     public static final SimpleExporter INSTANCE = new SimpleExporter();
     private static final Logger LOGGER = LoggerFactory.getLogger(SimpleExporter.class);
     private Map<Class<?>, Object> instanceMap = new ConcurrentHashMap<>();
-    private Map<Key, ServerSocket> serverSocketMap = new ConcurrentHashMap<>();
+    private Map<HostAndPort, ServerSocket> serverSocketMap = new ConcurrentHashMap<>();
     private ExecutorService executorService = Executors.newCachedThreadPool();
 
+    static {
+        try {
+            LOGGER.trace("Local Address: {}", NetUtil.LOCAL_ADDRESS);
+        } catch (Exception ignore) {
+        }
+    }
+
     {
-        Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
+        Thread hook = new Thread(new Runnable() {
             @Override
             public void run() {
                 LOGGER.info("shutting down....");
                 executorService.shutdown();
-                for (Map.Entry<Key, ServerSocket> entry : serverSocketMap.entrySet()) {
+                for (Map.Entry<HostAndPort, ServerSocket> entry : serverSocketMap.entrySet()) {
                     ServerSocket serverSocket = entry.getValue();
                     NetUtil.close(serverSocket);
                     LOGGER.info("ServerSocket Closed {} {}", entry.getKey(), serverSocket);
                 }
                 LOGGER.info("shutdown success.");
             }
-        }));
+        });
+        hook.setName("ExporterShutDownHook");
+        Runtime.getRuntime().addShutdownHook(hook);
+    }
+
+    /**
+     * 创建: youthlin.chen
+     * 时间: 2017-11-27 22:08
+     */
+    public static class HostAndPort {
+        private String host;
+        private int port;
+
+        HostAndPort(String host, int port) {
+            this.host = host;
+            this.port = port;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o)
+                return true;
+            if (o == null || getClass() != o.getClass())
+                return false;
+
+            HostAndPort hostAndPort = (HostAndPort) o;
+
+            //noinspection SimplifiableIfStatement
+            if (port != hostAndPort.port)
+                return false;
+            return host != null ? host.equals(hostAndPort.host) : hostAndPort.host == null;
+        }
+
+        @Override
+        public int hashCode() {
+            int result = host != null ? host.hashCode() : 0;
+            result = 31 * result + port;
+            return result;
+        }
+
+        @Override
+        public String toString() {
+            return "{" +
+                    "host='" + host + '\'' +
+                    ", port=" + port +
+                    '}';
+        }
     }
 
     @Override
@@ -66,10 +120,11 @@ public class SimpleExporter implements Exporter {
         }
         String host = providerConfig.host();
         int port = providerConfig.port();
-        Key key = new Key(host, port);
-        ServerSocket serverSocket = serverSocketMap.get(key);
+        HostAndPort hostAndPort = new HostAndPort(host, port);
+        ServerSocket serverSocket = serverSocketMap.get(hostAndPort);
         if (serverSocket == null) {
             try {
+                //t/o/d/o// use NIO
                 serverSocket = new ServerSocket(port, 0, InetAddress.getByName(host));
                 final ServerSocket ss = serverSocket;
                 String hostAddress = serverSocket.getInetAddress().getHostAddress();
@@ -96,7 +151,7 @@ public class SimpleExporter implements Exporter {
             } catch (IOException e) {
                 LOGGER.warn("new ServerSocket IOException", e);
             }
-            serverSocketMap.put(key, serverSocket);
+            serverSocketMap.put(hostAndPort, serverSocket);
         }
     }
 
@@ -120,8 +175,8 @@ public class SimpleExporter implements Exporter {
                 }
                 String host = providerConfig.host();
                 int port = providerConfig.port();
-                Key key = new Key(host, port);
-                serverSocketMap.remove(key);
+                HostAndPort hostAndPort = new HostAndPort(host, port);
+                serverSocketMap.remove(hostAndPort);
                 LOGGER.debug("unExported {}", instance.getClass());
             }
         });
@@ -148,7 +203,7 @@ public class SimpleExporter implements Exporter {
                 Invocation invocation = readInvocation(in);
 
                 boolean needReturn = RpcUtil.needReturn(invocation);
-                if (invocation.getException() != null) {
+                if (invocation.getException() != null) {//读取输入异常, 如传了 provider 端不存在的类过来
                     if (needReturn) {
                         writeInvocation(out, invocation);
                         return;
@@ -197,8 +252,7 @@ public class SimpleExporter implements Exporter {
         out.writeObject(invocation);
     }
 
-    @Override
-    public Invocation handler(Invocation invocation) {
+    protected Invocation handler(Invocation invocation) {
         Class<?> invokeInterface = invocation.invokeInterface();
         String methodName = invocation.methodName();
         Class<?>[] argsType = invocation.argsType();
@@ -222,7 +276,8 @@ public class SimpleExporter implements Exporter {
                 }
             }
         } catch (IllegalAccessException e) {
-            LOGGER.error("Invoke Error", e);
+            //should not happen cause we have invoke `method.setAccessible(true)`
+            LOGGER.error("IllegalAccessException", e);
             result.setException(e);
         } catch (InvocationTargetException e) {
             LOGGER.error("Invoke Error", e);
@@ -241,10 +296,12 @@ public class SimpleExporter implements Exporter {
         if (callback != null) {
             Class<?>[] argsType = invocation.argsType();
             if (callback.length != argsType.length) {
-                throw new IllegalArgumentException("callback config " + callback.length + " != " + argsType.length + " parameters");
+                throw new IllegalArgumentException(
+                        "callback config " + callback.length + " != " + argsType.length + " parameters");
             }
             for (int i = 0; i < callback.length; i++) {
                 if (callback[i]) {
+                    //callback 参数使用代理访问对方
                     args[i] = refer(invocation, i);
                 }
             }

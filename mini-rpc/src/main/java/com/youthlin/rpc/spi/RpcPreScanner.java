@@ -9,6 +9,7 @@ import com.youthlin.rpc.core.SimpleProxyFactory;
 import com.youthlin.rpc.core.config.ConsumerConfig;
 import com.youthlin.rpc.core.config.ServiceConfig;
 import com.youthlin.rpc.core.config.SimpleConsumerConfig;
+import com.youthlin.rpc.util.NetUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -25,6 +26,13 @@ import java.util.Set;
 public class RpcPreScanner implements IPreScanner {
     private static final Logger LOGGER = LoggerFactory.getLogger(RpcPreScanner.class);
     private static final Map<Class<?>, Object> CACHE = new HashMap<>();
+
+    static {
+        try {
+            LOGGER.trace("Local Address: {}", NetUtil.LOCAL_ADDRESS);
+        } catch (Exception ignore) {
+        }
+    }
 
     @Override
     public void preScan(Context context) {

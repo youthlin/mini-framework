@@ -104,8 +104,8 @@ public class MapperScanner {
     private void initSqlFile() {
         if (initSqlFile != null && !initSqlFile.isEmpty()) {
             try {
-                Reader sqlFileReader = Resources.getResourceAsReader(initSqlFile);
-                try (SqlSession sqlSession = factory.openSession();
+                try (Reader sqlFileReader = Resources.getResourceAsReader(initSqlFile);
+                        SqlSession sqlSession = factory.openSession();
                         Connection connection = sqlSession.getConnection()) {
                     connection.setAutoCommit(false);
                     // java 执行 sql 脚本的 3 种方式 (ant,ibatis,ScriptRunner)

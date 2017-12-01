@@ -4,7 +4,6 @@ import com.youthlin.rpc.core.Invocation;
 import com.youthlin.rpc.core.config.Config;
 import com.youthlin.rpc.core.config.ConsumerConfig;
 import com.youthlin.rpc.core.config.ProviderConfig;
-import com.youthlin.rpc.core.config.SimpleProviderConfig;
 
 import java.io.Serializable;
 import java.lang.reflect.Method;

@@ -16,18 +16,26 @@ import java.util.regex.Pattern;
  * 创建: youthlin.chen
  * 时间: 2017-11-26 15:25
  */
+@SuppressWarnings("WeakerAccess")
 public class NetUtil {
     private static final Logger LOGGER = LoggerFactory.getLogger(NetUtil.class);
     public static final int DEFAULT_PORT = 1884;
     public static final String ANY_HOST = "0.0.0.0";
     public static final String LOCALHOST = "127.0.0.1";
+    private static final String BOGON = "bogon";
     private static final Pattern IP_PATTERN = Pattern.compile("\\d{1,3}(\\.\\d{1,3}){3,5}$");
     private static final int RND_PORT_START = 30000;
     private static final int RND_PORT_RANGE = 10000;
     private static final int MIN_PORT = 0;
     private static final int MAX_PORT = 65535;
     private static final Random RANDOM = new Random(System.currentTimeMillis());
-    private static volatile InetAddress LOCAL_ADDRESS = null;
+    public static volatile InetAddress LOCAL_ADDRESS = null;
+
+    static {
+        LOGGER.info("get local address...");
+        LOCAL_ADDRESS = getLocalAddress0();//这个遍历网卡比较耗时 提前调一下
+        LOGGER.info("got local address: {}", LOCAL_ADDRESS);
+    }
 
     public static int getAvailablePort(int port) {
         if (port <= MIN_PORT) {
@@ -126,6 +134,7 @@ public class NetUtil {
             return false;
         String name = address.getHostAddress();
         return (name != null
+                && !BOGON.equals(address.getHostName())
                 && !ANY_HOST.equals(name)
                 && !LOCALHOST.equals(name)
                 && IP_PATTERN.matcher(name).matches());
