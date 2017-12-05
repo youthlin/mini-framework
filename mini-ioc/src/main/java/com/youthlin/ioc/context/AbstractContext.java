@@ -73,6 +73,7 @@ public abstract class AbstractContext implements Context {
             }
         }
 
+        registerBean(this);
         processor.autoScan(this, scanPackages);
 
         if (postScannerIterator != null) {
