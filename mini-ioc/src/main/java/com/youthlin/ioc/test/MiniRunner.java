@@ -3,13 +3,15 @@ package com.youthlin.ioc.test;
 import com.youthlin.ioc.annotation.AnnotationUtil;
 import com.youthlin.ioc.context.ClasspathContext;
 import com.youthlin.ioc.context.Context;
+import com.youthlin.ioc.spi.IPreScanner;
 import org.junit.runners.BlockJUnit4ClassRunner;
 import org.junit.runners.model.InitializationError;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Resource;
-import java.lang.reflect.Field;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * 使用 JUnit 测试时, 可以使用 {@link org.junit.runner.RunWith} 注解指定 {@link org.junit.runner.Runner}
@@ -58,7 +60,23 @@ public class MiniRunner extends BlockJUnit4ClassRunner {
             }
             scanPackages = new String[]{packageName};
         }
-        context = new ClasspathContext(scanPackages);
+        List<IPreScanner> preScannerList = new ArrayList<>();
+        try {
+            Class<?> testInstanceType = getTestClass().getJavaClass();
+            if (AnnotationUtil.getAnnotation(testInstanceType, Resource.class) == null) {
+                //测试类不被容器管理, 那么也要强行管理起来23333
+                final Object testInstance = super.createTest();
+                preScannerList.add(new IPreScanner() {
+                    @Override
+                    public void preScan(Context context) {
+                        context.registerBean(testInstance);
+                    }
+                });
+            }
+        } catch (Exception e) {
+            LOGGER.warn("", e);
+        }
+        context = new ClasspathContext(preScannerList, scanPackages);
     }
 
     /**
@@ -69,10 +87,6 @@ public class MiniRunner extends BlockJUnit4ClassRunner {
     @Override
     protected Object createTest() throws Exception {
         Class<?> javaClass = getTestClass().getJavaClass();
-        Object bean = context.getBean(javaClass);
-        if (bean != null) {
-            return bean;
-        }
-        return super.createTest();
+        return context.getBean(javaClass);
     }
 }
