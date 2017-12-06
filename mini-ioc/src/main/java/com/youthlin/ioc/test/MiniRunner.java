@@ -12,18 +12,32 @@ import javax.annotation.Resource;
 import java.lang.reflect.Field;
 
 /**
+ * 使用 JUnit 测试时, 可以使用 {@link org.junit.runner.RunWith} 注解指定 {@link org.junit.runner.Runner}
+ * <p>
+ * <pre>
+ *     &#064;RunWith(MiniRunner.class)
+ *     &#064;Scan("com.example")
+ *     &#064;Resource
+ *     public class ServiceTest{
+ *         &#064;Resource
+ *         private UserDao userDao;
+ *         public void save(){
+ *             userDao.save(...);
+ *         }
+ *     }
+ * </pre>
  * 创建: youthlin.chen
  * 时间: 2017-12-05 23:25
+ *
+ * @see Scan
  */
 public class MiniRunner extends BlockJUnit4ClassRunner {
     private static final Logger LOGGER = LoggerFactory.getLogger(MiniRunner.class);
     private Context context;
 
     /**
-     * Creates a BlockJUnit4ClassRunner to run {@code klass}
-     *
-     * @param klass
-     * @throws InitializationError if the test class is malformed.
+     * {@inheritDoc}
+     * 使用 MiniRunner 会构建一个 {@link Context}, 因此 测试类 如果是容器托管的, 那么也可以注入容器内其他的 Bean
      */
     public MiniRunner(Class<?> klass) throws InitializationError {
         super(klass);
@@ -42,11 +56,18 @@ public class MiniRunner extends BlockJUnit4ClassRunner {
             if (i > 0) {
                 packageName = className.substring(0, i);
             }
-            scanPackages = new String[] { packageName };
+            scanPackages = new String[]{packageName};
         }
         context = new ClasspathContext(scanPackages);
     }
 
+    /**
+     * {@inheritDoc}
+     * 默认从容器中取出测试类实例, 若容器内没有且该类依赖了其他 Bean 则抛出异常.
+     * 否则调用 JUnit 父类逻辑使用默认构造方法生成测试类的实例
+     *
+     * @throws IllegalAccessException 当测试类没有 &#064;Resource 注解 但其有字段含有 &#064;Resource 注解（即只有容器托管的才能注入）
+     */
     @Override
     protected Object createTest() throws Exception {
         Class<?> javaClass = getTestClass().getJavaClass();
@@ -64,7 +85,7 @@ public class MiniRunner extends BlockJUnit4ClassRunner {
                 }
             }
             if (fail) {
-                throw new IllegalAccessException("Only IoC management bean can inject filed.");
+                throw new IllegalAccessException("Only IoC managed bean can inject field.");
             }
         }
         return super.createTest();

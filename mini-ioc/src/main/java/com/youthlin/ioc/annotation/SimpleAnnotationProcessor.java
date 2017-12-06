@@ -30,7 +30,6 @@ public class SimpleAnnotationProcessor implements IAnnotationProcessor {
     /**
      * 对包路径进行自动扫描
      */
-    @SuppressWarnings("unchecked")
     @Override
     public void autoScan(Context context, String... scanPackages) {
         Set<String> classNames = new HashSet<>();
