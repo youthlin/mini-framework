@@ -3,7 +3,6 @@ package com.youthlin.ioc.test;
 import com.youthlin.ioc.annotation.Controller;
 import com.youthlin.ioc.context.Context;
 import com.youthlin.ioc.test.service.IUserService;
-import com.youthlin.ioc.test.service.UserService;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -25,8 +24,8 @@ import javax.annotation.Resource;
 @Controller
 public class UserController {
     private static final Logger LOGGER = LoggerFactory.getLogger(UserController.class);
-    @Resource(name = "UserService2")
-    private UserService userService;
+    @Resource
+    private IUserService userService;
     @Resource
     private Context context;
 
