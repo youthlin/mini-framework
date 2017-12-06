@@ -121,17 +121,33 @@ public class SimpleAnnotationProcessor implements IAnnotationProcessor {
         Field[] fields = objClass.getDeclaredFields();
         if (fields != null) {
             for (Field field : fields) {
-                Resource resourceAnnotation = AnnotationUtil.getAnnotation(field, Resource.class);
-                if (resourceAnnotation != null) {
+                int fieldModifiers = field.getModifiers();
+                if (Modifier.isStatic(fieldModifiers) || Modifier.isFinal(fieldModifiers)) {
+                    continue;//静态的, Final 的不需要处理
+                }
+                Resource resource = AnnotationUtil.getAnnotation(field, Resource.class);
+                if (resource != null) {
+                    //Resource 注入规则: 优先按照名字注入, 若没有再按照类型注入, 若指定了 @Resource(name='xxx') 则只按名字注入
                     Object filedValue;
-                    String name = AnnotationUtil.getAnnotationName(field);
-                    if (!name.isEmpty()) {//如果有名称，使用名称查找 Bean
+                    String name = resource.name();
+                    if (!name.isEmpty()) {//如果注解指定了名称，只按名称查找 Bean
                         filedValue = context.getNameBeanMap().get(name);
                     } else {
-                        filedValue = getFiledValueByType(context, field, object);
+                        //优先按照 FieldName 查找
+                        name = field.getName();
+                        name = name.substring(0, 1).toUpperCase() + name.substring(1);
+                        filedValue = context.getNameBeanMap().get(name);
+                        if (filedValue == null) {
+                            //找不到按类型查找
+                            filedValue = getFiledValueByType(context, field, object);
+                        }
                     }
                     if (filedValue == null) {
                         throw new NoSuchBeanException(name);
+                    }
+                    if (!field.getType().isAssignableFrom(filedValue.getClass())) {
+                        //按名称注入可能类型不兼容
+                        throw new NoSuchBeanException("Bean named " + name + " is expected to be of type \'" + field.getType() + "\' but was actually of type \'" + filedValue.getClass() + '\'');
                     }
                     if (!AnnotationUtil.setFiledValue(object, field, filedValue)) {
                         throw new BeanInjectException("Can not inject field " + field + " to class " + objClass);

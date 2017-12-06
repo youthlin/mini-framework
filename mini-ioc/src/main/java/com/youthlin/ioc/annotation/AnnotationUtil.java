@@ -179,20 +179,6 @@ public class AnnotationUtil {
         return classNames;
     }
 
-    /**
-     * 获取字段上注解的名称
-     *
-     * @return 如果注解定义了名称，直接返回；否则返回空字符串
-     */
-    static String getAnnotationName(Field field) {
-        Resource resource = getAnnotation(field, Resource.class);
-        String name = "";
-        if (resource != null) {
-            name = resource.name();
-        }
-        return name;
-    }
-
     public static Class<?> forName(String className) {
         try {
             return Class.forName(className);

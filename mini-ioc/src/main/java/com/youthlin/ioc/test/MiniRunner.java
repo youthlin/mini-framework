@@ -63,10 +63,8 @@ public class MiniRunner extends BlockJUnit4ClassRunner {
 
     /**
      * {@inheritDoc}
-     * 默认从容器中取出测试类实例, 若容器内没有且该类依赖了其他 Bean 则抛出异常.
-     * 否则调用 JUnit 父类逻辑使用默认构造方法生成测试类的实例
-     *
-     * @throws IllegalAccessException 当测试类没有 &#064;Resource 注解 但其有字段含有 &#064;Resource 注解（即只有容器托管的才能注入）
+     * 默认从容器中取出测试类实例,
+     * 若容器内没有 则调用 JUnit 父类逻辑使用默认构造方法生成测试类的实例
      */
     @Override
     protected Object createTest() throws Exception {
@@ -74,19 +72,6 @@ public class MiniRunner extends BlockJUnit4ClassRunner {
         Object bean = context.getBean(javaClass);
         if (bean != null) {
             return bean;
-        } else {
-            boolean fail = false;
-            for (Field field : javaClass.getDeclaredFields()) {
-                if (AnnotationUtil.getAnnotation(field, Resource.class) != null) {
-                    LOGGER.warn(
-                            "Test Instance {} has @Resource annotation filed {}, but itself is not managed by IoC container.",
-                            javaClass.getSimpleName(), field.getName());
-                    fail = true;
-                }
-            }
-            if (fail) {
-                throw new IllegalAccessException("Only IoC managed bean can inject field.");
-            }
         }
         return super.createTest();
     }
