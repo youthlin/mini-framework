@@ -70,6 +70,7 @@ public class MiniRunner extends BlockJUnit4ClassRunner {
                     @Override
                     public void preScan(Context context) {
                         context.registerBean(testInstance);
+                        context.registerBean(context);
                     }
                 });
             }

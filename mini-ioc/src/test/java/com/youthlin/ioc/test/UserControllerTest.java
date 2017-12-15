@@ -21,8 +21,8 @@ import java.util.Map;
  */
 @Scan("com.youthlin.ioc")
 @RunWith(MiniRunner.class)
-public class UserController {
-    private static final Logger LOGGER = LoggerFactory.getLogger(UserController.class);
+public class UserControllerTest {
+    private static final Logger LOGGER = LoggerFactory.getLogger(UserControllerTest.class);
     @Resource
     private IUserService userService;
     @Resource
@@ -42,21 +42,21 @@ public class UserController {
 
     @Test
     public void test1() {
-        LOGGER.info("{}", context.getBean(UserController.class) == this);
-        System.out.println(userService.sayHello(1));
-    }
-
-    @Test
-    public void test2() {
-        LOGGER.info("{}", context.getBean(UserController.class) == this);
+        LOGGER.info("{}", context.getBean(UserControllerTest.class) == this);
         System.out.println(userService.sayHello(1));
     }
 
     @Test
     @Ignore
-    public void test3() {
-        LOGGER.info("{}", context.getBean(UserController.class) == this);
+    public void test2() {
+        LOGGER.info("{}", context.getBean(UserControllerTest.class) == this);
         System.out.println(userService.sayHello(1));
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testEx() {
+        LOGGER.info("exception...");
+        throw new IllegalArgumentException();
     }
 
     @After

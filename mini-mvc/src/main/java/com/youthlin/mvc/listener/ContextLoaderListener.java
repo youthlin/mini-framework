@@ -100,19 +100,11 @@ public class ContextLoaderListener implements ServletContextListener {
             Class<?> beanClass = bean.getClass();
             Controller controller = AnnotationUtil.getAnnotation(beanClass, Controller.class);
             if (controller != null) {
+                String urlPrefix[] = {};
                 URL controllerUrl = AnnotationUtil.getAnnotation(beanClass, URL.class);
-                String urlPrefix = null;
                 if (controllerUrl != null) {
                     urlPrefix = AnnotationUtil.getValue(beanClass, controllerUrl);
                 }
-                urlPrefix = urlPrefix == null ? "" : urlPrefix;
-                if (!urlPrefix.startsWith(Constants.FORWARD_CHAR)) {
-                    urlPrefix = Constants.FORWARD_CHAR + urlPrefix;
-                }
-                if (urlPrefix.endsWith(Constants.FORWARD_CHAR)) {
-                    urlPrefix = urlPrefix.substring(0, urlPrefix.length() - Constants.FORWARD_CHAR.length());
-                }
-                urlPrefix = sce.getServletContext().getContextPath() + urlPrefix;
                 Method[] methods = beanClass.getMethods();
                 if (methods != null) {
                     for (Method method : methods) {
@@ -127,26 +119,26 @@ public class ContextLoaderListener implements ServletContextListener {
                                 continue;
                             }
                             String[] urls = AnnotationUtil.getValue(method, urlAnnotation);
+                            List<String> mappedUrlList = new ArrayList<>();
                             if (urls.length > 0) {
                                 for (String url : urls) {
                                     if (!url.startsWith(Constants.FORWARD_CHAR)) {
                                         url = Constants.FORWARD_CHAR + url;
                                     }
-                                    url = urlPrefix + url;
-                                    if (urlHttpMethods.length == 0) {
-                                        URLAndMethod urlAndMethod = new URLAndMethod(url);//for all methods
-                                        urlMapping.put(urlAndMethod, controllerAndMethod);
-                                        mappedUrls.add(url);
-                                    }
-                                    for (HttpMethod urlHttpMethod : urlHttpMethods) {
-                                        URLAndMethod urlAndMethod = new URLAndMethod(url, urlHttpMethod);
-                                        urlMapping.put(urlAndMethod, controllerAndMethod);
-                                        mappedUrls.add(url);
+                                    if (urlPrefix.length == 0) {
+                                        url = sce.getServletContext().getContextPath() + url;
+                                        mappingUrlToMethod(url, urlHttpMethods, controllerAndMethod);
+                                        mappedUrlList.add(url);
+                                    } else {
+                                        for (String prefix : urlPrefix) {
+                                            url = sce.getServletContext().getContextPath() + formatSlash(prefix) + url;
+                                            mappingUrlToMethod(url, urlHttpMethods, controllerAndMethod);
+                                            mappedUrlList.add(url);
+                                        }
                                     }
                                 }
                             }
-                            LOGGER.info("mapping url {} {} to method {}",
-                                    Arrays.toString(urls), Arrays.toString(urlHttpMethods), method);
+                            LOGGER.info("mapping url {} {} to method {}", mappedUrlList, Arrays.toString(urlHttpMethods), method);
                         }
                     }
                 }
@@ -154,6 +146,31 @@ public class ContextLoaderListener implements ServletContextListener {
         }
         sce.getServletContext().setAttribute(Constants.URL_MAPPING_MAP, urlMapping);
         sce.getServletContext().setAttribute(Constants.MAPPED_URL_SET, mappedUrls);
+    }
+
+    //斜线开头，结尾无斜线
+    private String formatSlash(String urlPrefix) {
+        urlPrefix = urlPrefix == null ? "" : urlPrefix;
+        if (!urlPrefix.startsWith(Constants.FORWARD_CHAR)) {
+            urlPrefix = Constants.FORWARD_CHAR + urlPrefix;
+        }
+        if (urlPrefix.endsWith(Constants.FORWARD_CHAR)) {
+            urlPrefix = urlPrefix.substring(0, urlPrefix.length() - Constants.FORWARD_CHAR.length());
+        }
+        return urlPrefix;
+    }
+
+    private void mappingUrlToMethod(String url, HttpMethod[] urlHttpMethods, ControllerAndMethod controllerAndMethod) {
+        if (urlHttpMethods.length == 0) {
+            URLAndMethod urlAndMethod = new URLAndMethod(url);//for all methods
+            urlMapping.put(urlAndMethod, controllerAndMethod);
+            mappedUrls.add(url);
+        }
+        for (HttpMethod urlHttpMethod : urlHttpMethods) {
+            URLAndMethod urlAndMethod = new URLAndMethod(url, urlHttpMethod);
+            urlMapping.put(urlAndMethod, controllerAndMethod);
+            mappedUrls.add(url);
+        }
     }
 
     @Override
