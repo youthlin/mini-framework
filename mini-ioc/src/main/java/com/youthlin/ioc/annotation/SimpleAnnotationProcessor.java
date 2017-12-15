@@ -74,7 +74,7 @@ public class SimpleAnnotationProcessor implements IAnnotationProcessor {
             }
             Resource annotation = AnnotationUtil.getAnnotation(aClass, Resource.class);
             if (annotation != null) {
-                String name = AnnotationUtil.getAnnotationName(aClass);
+                String name = AnnotationUtil.getBeanName(aClass);
                 if (shouldNewInstance(aClass)) {
                     Object o = aClass.newInstance();
                     context.registerBean(o, name);
@@ -135,7 +135,7 @@ public class SimpleAnnotationProcessor implements IAnnotationProcessor {
                     } else {
                         //优先按照 FieldName 查找
                         name = field.getName();
-                        name = name.substring(0, 1).toUpperCase() + name.substring(1);
+                        //name = name.substring(0, 1).toUpperCase() + name.substring(1);
                         filedValue = context.getNameBeanMap().get(name);
                         if (filedValue == null) {
                             //找不到按类型查找

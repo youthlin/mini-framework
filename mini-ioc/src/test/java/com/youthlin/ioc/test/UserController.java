@@ -13,19 +13,22 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Resource;
+import java.util.Map;
 
 /**
  * 创建: youthlin.chen
  * 时间: 2017-12-05 23:30
  */
-@RunWith(MiniRunner.class)
 @Scan("com.youthlin.ioc")
+@RunWith(MiniRunner.class)
 public class UserController {
     private static final Logger LOGGER = LoggerFactory.getLogger(UserController.class);
     @Resource
     private IUserService userService;
     @Resource
     private Context context;
+    @Resource
+    private Map<String, IUserService> userServiceMap;
 
     @BeforeClass
     public static void beforeClass() {
@@ -34,7 +37,7 @@ public class UserController {
 
     @Before
     public void before() {
-        LOGGER.info("before");
+        LOGGER.info("before {}", userServiceMap);
     }
 
     @Test

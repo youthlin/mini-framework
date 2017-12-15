@@ -103,7 +103,7 @@ public class ContextLoaderListener implements ServletContextListener {
                 URL controllerUrl = AnnotationUtil.getAnnotation(beanClass, URL.class);
                 String urlPrefix = null;
                 if (controllerUrl != null) {
-                    urlPrefix = (String) AnnotationUtil.getValue(beanClass, controllerUrl);
+                    urlPrefix = AnnotationUtil.getValue(beanClass, controllerUrl);
                 }
                 urlPrefix = urlPrefix == null ? "" : urlPrefix;
                 if (!urlPrefix.startsWith(Constants.FORWARD_CHAR)) {
@@ -122,12 +122,11 @@ public class ContextLoaderListener implements ServletContextListener {
                         ControllerAndMethod controllerAndMethod = new ControllerAndMethod(bean, method);
                         URL urlAnnotation = AnnotationUtil.getAnnotation(method, URL.class);
                         if (urlAnnotation != null) {
-                            HttpMethod[] urlHttpMethods = (HttpMethod[])
-                                    AnnotationUtil.getValue(method, urlAnnotation, "method");
+                            HttpMethod[] urlHttpMethods = AnnotationUtil.getValue(method, urlAnnotation, "method");
                             if (urlHttpMethods == null) {
                                 continue;
                             }
-                            String[] urls = (String[]) AnnotationUtil.getValue(method, urlAnnotation);
+                            String[] urls = AnnotationUtil.getValue(method, urlAnnotation);
                             if (urls.length > 0) {
                                 for (String url : urls) {
                                     if (!url.startsWith(Constants.FORWARD_CHAR)) {

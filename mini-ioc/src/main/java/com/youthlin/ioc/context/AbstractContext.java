@@ -90,7 +90,7 @@ public abstract class AbstractContext implements Context {
 
     @Override
     public void registerBean(Object bean) {
-        registerBean(bean, bean.getClass().getSimpleName());
+        registerBean(bean, AnnotationUtil.getBeanName(bean.getClass()));
     }
 
     @Override

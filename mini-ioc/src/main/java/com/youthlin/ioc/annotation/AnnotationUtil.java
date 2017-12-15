@@ -251,24 +251,11 @@ public class AnnotationUtil {
     }
 
     /**
-     * Retrieve the <em>value</em> of the {@code &quot;value&quot;} attribute of a
-     * single-element Annotation, given an annotation instance.
-     *
-     * @param annotation the annotation instance from which to retrieve the value
-     * @return the attribute value, or {@code null} if not found
-     * @see #getValue(Annotation, String)
-     */
-    public static Object getValue(Annotation annotation) {
-        return getValue(annotation, VALUE);
-    }
-
-    /**
      * Retrieve the <em>value</em> of a named Annotation attribute, given an annotation instance.
      *
      * @param annotation    the annotation instance from which to retrieve the value
      * @param attributeName the name of the attribute value to retrieve
      * @return the attribute value, or {@code null} if not found
-     * @see #getValue(Annotation)
      */
     public static Object getValue(Annotation annotation, String attributeName) {
         try {
@@ -280,89 +267,41 @@ public class AnnotationUtil {
     }
 
     /**
-     * Retrieve the <em>default value</em> of the {@code &quot;value&quot;} attribute
-     * of a single-element Annotation, given an annotation instance.
-     *
-     * @param annotation the annotation instance from which to retrieve the default value
-     * @return the default value, or {@code null} if not found
-     * @see #getDefaultValue(Annotation, String)
-     */
-    public static Object getDefaultValue(Annotation annotation) {
-        return getDefaultValue(annotation, VALUE);
-    }
-
-    /**
-     * Retrieve the <em>default value</em> of a named Annotation attribute, given an annotation instance.
-     *
-     * @param annotation    the annotation instance from which to retrieve the default value
-     * @param attributeName the name of the attribute value to retrieve
-     * @return the default value of the named attribute, or {@code null} if not found
-     * @see #getDefaultValue(Class, String)
-     */
-    public static Object getDefaultValue(Annotation annotation, String attributeName) {
-        return getDefaultValue(annotation.annotationType(), attributeName);
-    }
-
-    /**
-     * Retrieve the <em>default value</em> of the {@code &quot;value&quot;} attribute
-     * of a single-element Annotation, given the {@link Class annotation type}.
-     *
-     * @param annotationType the <em>annotation type</em> for which the default value should be retrieved
-     * @return the default value, or {@code null} if not found
-     * @see #getDefaultValue(Class, String)
-     */
-    public static Object getDefaultValue(Class<? extends Annotation> annotationType) {
-        return getDefaultValue(annotationType, VALUE);
-    }
-
-    /**
-     * Retrieve the <em>default value</em> of a named Annotation attribute, given the {@link Class annotation type}.
-     *
-     * @param annotationType the <em>annotation type</em> for which the default value should be retrieved
-     * @param attributeName  the name of the attribute value to retrieve.
-     * @return the default value of the named attribute, or {@code null} if not found
-     * @see #getDefaultValue(Annotation, String)
-     */
-    public static Object getDefaultValue(Class<? extends Annotation> annotationType, String attributeName) {
-        try {
-            Method method = annotationType.getDeclaredMethod(attributeName);
-            return method.getDefaultValue();
-        } catch (Exception ex) {
-            return null;
-        }
-    }
-
-    /**
      * 获取注解(/Controller/Service/Dao/Resource)中定义的名称.
      *
-     * @return 如果注解定义了名称，返回名称，否则返回类名
-     * @throws IllegalArgumentException 当类没有被注解时
+     * @return 如果有注解且定义了名称，返回名称，否则返回类名（类名首字母小写）
      */
-    static String getAnnotationName(Class<?> clazz) {
-        Resource resourceAnnotation = AnnotationUtil.getAnnotation(clazz, Resource.class);
-        if (resourceAnnotation == null) {
-            throw new IllegalArgumentException("No @Resource annotation at this object.");
+    public static String getBeanName(Class<?> clazz) {
+        Resource resource = AnnotationUtil.getAnnotation(clazz, Resource.class);
+        String name = null;
+        if (resource != null) {
+            name = getValue(clazz, resource, "name");
+            if (name == null || name.isEmpty()) {
+                name = getValue(clazz, resource);
+            }
         }
-        String name = (String) getValue(clazz, resourceAnnotation, "name");
         if (name == null || name.isEmpty()) {
             name = clazz.getSimpleName();
+            name = name.substring(0, 1).toLowerCase() + name.substring(1);
         }
         return name;
     }
 
-    public static Object getValue(AnnotatedElement ae, Annotation annotation) {
-        return getValue(ae, annotation, VALUE);
+    @SuppressWarnings("unchecked")
+    public static <T> T getValue(AnnotatedElement ae, Annotation annotation) {
+        return (T) getValue(ae, annotation, VALUE);
     }
 
-    public static Object getValue(AnnotatedElement ae, Annotation annotation, String attributeName) {
+    @SuppressWarnings("unchecked")
+    public static <T> T getValue(AnnotatedElement ae, Annotation annotation, String attributeName) {
         Annotation anno = ae.getAnnotation(annotation.annotationType());
         if (anno != null) {//anno 直接注解在 clazz 上
-            return getValue(anno, attributeName);
+            return (T) getValue(anno, attributeName);
         }
         for (Annotation at : ae.getAnnotations()) {
             Annotation ata = at.annotationType().getAnnotation(annotation.annotationType());
             if (ata != null) {//ata 注解在 at 上, at 注解在 clazz 上
-                return getValue(at, attributeName);
+                return (T) getValue(at, attributeName);
             }
         }
         return null;
@@ -421,7 +360,7 @@ public class AnnotationUtil {
         if (list.size() == 1) {
             return list.get(0);
         }
-        throw new NoSuchBeanException("find more than one bean with type: " + clazz.getName());
+        throw new NoSuchBeanException("find more than one bean of type: " + clazz.getName());
 
     }
 
@@ -448,14 +387,14 @@ public class AnnotationUtil {
         Map<String, T> map = new HashMap<>();
         T o = (T) clazzBeanMap.get(clazz);
         if (o != null) {
-            String name = AnnotationUtil.getAnnotationName(o.getClass());
+            String name = AnnotationUtil.getBeanName(o.getClass());
             map.put(name, o);
         } else {
             for (Map.Entry<Class, Object> entry : clazzBeanMap.entrySet()) {
                 Class aClass = entry.getKey();
                 if (clazz.isAssignableFrom(aClass)) {
                     //aClass 类可以赋值给 clazz (aClass 是 clazz 的子类)
-                    String name = AnnotationUtil.getAnnotationName(aClass);
+                    String name = AnnotationUtil.getBeanName(aClass);
                     map.put(name, (T) entry.getValue());
                 }
             }

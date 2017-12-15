@@ -8,10 +8,10 @@ import java.util.Set;
  * 创建： youthlin.chen
  * 时间： 2017-08-10 13:31.
  */
-@SuppressWarnings({ "UnusedReturnValue", "unused" })
+@SuppressWarnings({"UnusedReturnValue", "unused"})
 public interface Context {
     /**
-     * 往容器中注册一个 Bean, 注册名称为类名
+     * 往容器中注册一个 Bean, 注册名称为类名（首字母小写）
      */
     void registerBean(Object bean);
 
