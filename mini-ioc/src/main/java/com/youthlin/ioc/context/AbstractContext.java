@@ -15,6 +15,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.ServiceLoader;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -62,27 +63,31 @@ public abstract class AbstractContext implements Context {
     private void init(Iterator<IPreScanner> preScannerIterator, Iterator<IPostScanner> postScannerIterator,
             String... scanPackages) {
         this.scanPackages = scanPackages;
-        if (preScannerIterator != null) {
-            while (preScannerIterator.hasNext()) {
-                IPreScanner preScanner = preScannerIterator.next();
-                try {
-                    preScanner.preScan(this);
-                } catch (Throwable e) {
-                    LOGGER.error("PreScanner Error {}", preScanner, e);//不能影响主流程
-                }
+        if (preScannerIterator == null) {
+            ServiceLoader<IPreScanner> preScanners = ServiceLoader.load(IPreScanner.class);
+            preScannerIterator = preScanners.iterator();
+        }
+        while (preScannerIterator.hasNext()) {
+            IPreScanner preScanner = preScannerIterator.next();
+            try {
+                preScanner.preScan(this);
+            } catch (Throwable e) {
+                LOGGER.error("PreScanner Error {}", preScanner, e);//不能影响主流程
             }
         }
 
         processor.autoScan(this, scanPackages);
 
-        if (postScannerIterator != null) {
-            while (postScannerIterator.hasNext()) {
-                IPostScanner postScanner = postScannerIterator.next();
-                try {
-                    postScanner.postScanner(this);
-                } catch (Throwable e) {
-                    LOGGER.error("PostScanner Error {}", postScanner, e);//不能影响主流程
-                }
+        if (postScannerIterator == null) {
+            ServiceLoader<IPostScanner> postScanners = ServiceLoader.load(IPostScanner.class);
+            postScannerIterator = postScanners.iterator();
+        }
+        while (postScannerIterator.hasNext()) {
+            IPostScanner postScanner = postScannerIterator.next();
+            try {
+                postScanner.postScanner(this);
+            } catch (Throwable e) {
+                LOGGER.error("PostScanner Error {}", postScanner, e);//不能影响主流程
             }
         }
     }
