@@ -59,7 +59,6 @@
         <dependency>
             <groupId>com.youthlin</groupId>
             <artifactId>mini-ioc</artifactId>
-            <version>${project.version}</version>
         </dependency>
 
         <dependency>

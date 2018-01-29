@@ -16,6 +16,7 @@
         <module>mini-ioc</module>
         <module>mini-mvc</module>
         <module>mini-rpc</module>
+        <module>mini-aop</module>
     </modules>
 
     <properties>
@@ -39,6 +40,12 @@
                 <groupId>ch.qos.logback</groupId>
                 <artifactId>logback-classic</artifactId>
                 <version>${logback.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.youthlin</groupId>
+                <artifactId>mini-ioc</artifactId>
+                <version>${project.version}</version>
             </dependency>
 
             <dependency>
