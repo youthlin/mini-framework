@@ -200,12 +200,7 @@ public class ObjectInjectUtil {
     }
 
     private static SimpleConverter getSimpleConverter(Class<?> type) {
-        SimpleConverter converter = getContext().getBean(SimpleConverter.class);
-        if (converter == null) {
-            converter = SimpleConverter.getInstance(type);
-            getContext().registerBean(converter);
-        }
-        return converter;
+        return SimpleConverter.getInstance(type);
     }
 
 }
