@@ -8,7 +8,7 @@
     <artifactId>mini-framework</artifactId>
     <packaging>pom</packaging>
     <!-- mvn versions:set -DnewVersion=x.x.x -->
-    <version>1.1.0</version>
+    <version>1.1.1-SNAPSHOT</version>
     <name>Mini Framework</name>
     <description>A Mini Framework contains Mini-IoC, Mini-MVC, etc.</description>
     <url>https://github.com/YouthLin/mini-framework</url>

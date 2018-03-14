@@ -8,21 +8,24 @@ import com.youthlin.mvc.annotation.RequestBody;
 import com.youthlin.mvc.listener.ContextLoaderListener;
 import com.youthlin.mvc.listener.ControllerAndMethod;
 import com.youthlin.mvc.listener.URLAndMethod;
-import com.youthlin.mvc.view.DefaultView;
 import com.youthlin.mvc.servlet.filter.Interceptor;
 import com.youthlin.mvc.support.Ordered;
-import com.youthlin.mvc.view.View;
 import com.youthlin.mvc.util.Constants;
 import com.youthlin.mvc.util.Java8ParameterNameDiscoverer;
 import com.youthlin.mvc.util.JavaVersion;
+import com.youthlin.mvc.util.LocalVariableTableParameterNameDiscoverer;
 import com.youthlin.mvc.util.ObjectInjectUtil;
+import com.youthlin.mvc.view.DefaultView;
+import com.youthlin.mvc.view.View;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.servlet.ServletException;
+import javax.servlet.annotation.MultipartConfig;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.Part;
 import java.io.IOException;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Array;
@@ -42,6 +45,7 @@ import java.util.Set;
  * 时间： 2017-08-13 15:43.
  */
 @SuppressWarnings("WeakerAccess")
+@MultipartConfig
 public class DispatcherServlet extends HttpServlet {
     private static final Logger LOGGER = LoggerFactory.getLogger(DispatcherServlet.class);
     private ArrayList<Interceptor> interceptorList;
@@ -158,6 +162,14 @@ public class DispatcherServlet extends HttpServlet {
                 parameter[i] = req;
             } else if (parameterType.isAssignableFrom(HttpServletResponse.class)) {
                 parameter[i] = resp;
+            } else if (parameterType.isAssignableFrom(Part.class)) {
+                try {
+                    Part part = req.getPart(getParameterName(method, params[i], i));
+                    parameter[i] = part;
+                } catch (IOException | ServletException e) {
+                    //throw new IllegalArgumentException("Can not inject parameter of type: Part. " + method, e);
+                    LOGGER.debug("Can not inject parameter of type: Part. {}", method, e);
+                }
             } else if (parameterType.isAssignableFrom(Map.class)) {
                 HashMap<String, Object> map = new ModelWithRequest(req);
                 parameter[i] = map;
@@ -220,12 +232,12 @@ public class DispatcherServlet extends HttpServlet {
             }
             return name;
         }
-        String[] parameterNames = null;
-        try {
-            parameterNames = ObjectInjectUtil.getParameterNames(method);
-        } catch (IOException e) {
-            LOGGER.warn("Can not get method parameter name", e);
+        LocalVariableTableParameterNameDiscoverer discoverer = getContext().getBean(LocalVariableTableParameterNameDiscoverer.class);
+        if (discoverer == null) {
+            discoverer = new LocalVariableTableParameterNameDiscoverer();
+            getContext().registerBean(discoverer);
         }
+        String[] parameterNames = discoverer.getParameterNames(method);
         if (parameterNames != null) {
             return parameterNames[index];
         }
@@ -363,22 +375,22 @@ public class DispatcherServlet extends HttpServlet {
         }
         String method = req.getMethod();
         switch (method) {
-        case "HEAD":
-            processHead(req, resp);
-            break;
-        case "OPTIONS":
-            processOptions(req, resp);
-            break;
-        case "TRACE":
-            super.doTrace(req, resp);
-            break;
-        case "GET":
-        case "POST":
-        case "PUT":
-        case "PATCH":
-        case "DELETE":
-        default:
-            sendError405(req, resp);
+            case "HEAD":
+                processHead(req, resp);
+                break;
+            case "OPTIONS":
+                processOptions(req, resp);
+                break;
+            case "TRACE":
+                super.doTrace(req, resp);
+                break;
+            case "GET":
+            case "POST":
+            case "PUT":
+            case "PATCH":
+            case "DELETE":
+            default:
+                sendError405(req, resp);
         }
     }
 
@@ -414,11 +426,11 @@ public class DispatcherServlet extends HttpServlet {
 
     private boolean supportHttpMethod(String requestUri, HttpMethod method) {
         switch (method) {
-        case HEAD:
-            return supportHttpMethod(requestUri, HttpMethod.GET);
-        case TRACE:
-        case OPTIONS:
-            return true;
+            case HEAD:
+                return supportHttpMethod(requestUri, HttpMethod.GET);
+            case TRACE:
+            case OPTIONS:
+                return true;
         }
         Map<URLAndMethod, ControllerAndMethod> urlMappingMap = getUrlMappingMap();
         URLAndMethod urlAndMethod = new URLAndMethod(requestUri, method);
