@@ -108,7 +108,7 @@ public class ContextLoaderListener implements ServletContextListener {
                 Method[] methods = beanClass.getMethods();
                 if (methods != null) {
                     for (Method method : methods) {
-                        if (method.getModifiers() != Modifier.PUBLIC) {
+                        if (!Modifier.isPublic(method.getModifiers())) {
                             continue;
                         }
                         ControllerAndMethod controllerAndMethod = new ControllerAndMethod(bean, method);
