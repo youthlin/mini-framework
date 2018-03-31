@@ -8,7 +8,7 @@
     <artifactId>mini-framework</artifactId>
     <packaging>pom</packaging>
     <!-- mvn versions:set -DnewVersion=x.x.x -->
-    <version>1.1.1-SNAPSHOT</version>
+    <version>1.1.1</version>
     <name>Mini Framework</name>
     <description>A Mini Framework contains Mini-IoC, Mini-MVC, etc.</description>
     <url>https://github.com/YouthLin/mini-framework</url>
@@ -25,7 +25,7 @@
         <maven.compiler.source>1.7</maven.compiler.source>
         <maven.compiler.target>1.7</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-
+        <gpg.executable>gpg2</gpg.executable>
     </properties>
 
     <dependencyManagement>

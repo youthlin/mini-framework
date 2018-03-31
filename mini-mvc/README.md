@@ -52,3 +52,6 @@ public class UserController{
 </body>
 </html>
 ```
+
+## 更新记录
+- 1.1.1 版本已支持文件上传, 只需在 Controller 方法参数中写上 Part 类型的形参即可自动注入。
