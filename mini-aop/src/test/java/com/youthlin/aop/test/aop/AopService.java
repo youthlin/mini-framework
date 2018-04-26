@@ -16,7 +16,8 @@ import java.lang.reflect.Method;
 public class AopService {
     private static final Logger LOGGER = LoggerFactory.getLogger(AopService.class);
 
-    @Around(".*\\.sayHello\\(.*\\)")
+    //@Around(".*\\.sayHello\\(.*\\)")
+    @Around(".*")
     public Object around(ProceedingJoinPoint pjp) {
         try {
             Object proxy = pjp.getThis();

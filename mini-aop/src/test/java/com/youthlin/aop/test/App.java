@@ -28,6 +28,7 @@ public class App {
     public void run() {
         LOGGER.info("{}", context.getNameBeanMap());
         LOGGER.info("sayHello: {}", helloService.sayHello("Lin"));
+        LOGGER.info("{}", helloService.getClass());
     }
 
 }

@@ -1,5 +1,6 @@
 package com.youthlin.ioc.annotation;
 
+import com.youthlin.ioc.context.BeanPostProcessor;
 import com.youthlin.ioc.context.Context;
 import com.youthlin.ioc.exception.BeanDefinitionException;
 import com.youthlin.ioc.exception.BeanInjectException;
@@ -32,8 +33,7 @@ public class SimpleAnnotationProcessor implements IAnnotationProcessor {
      */
     @Override
     public void autoScan(Context context, String... scanPackages) {
-        Set<String> classNames = new HashSet<>();
-        classNames.addAll(AnnotationUtil.getClassNames(scanPackages));
+        Set<String> classNames = new HashSet<>(AnnotationUtil.getClassNames(scanPackages));
         LOGGER.trace("class names in scan package: {}", classNames);
         // 构造 Bean
         for (String className : classNames) {
@@ -77,6 +77,9 @@ public class SimpleAnnotationProcessor implements IAnnotationProcessor {
                 String name = AnnotationUtil.getBeanName(aClass);
                 if (shouldNewInstance(aClass)) {
                     Object o = aClass.newInstance();
+                    for (BeanPostProcessor beanPostProcessor : context.getBeans(BeanPostProcessor.class)) {
+                        o = beanPostProcessor.postProcess(o, name);
+                    }
                     context.registerBean(o, name);
                     LOGGER.debug("find bean: {}, name: {}, annotations: {}", o.getClass(), name,
                             Arrays.toString(aClass.getAnnotations()));
@@ -184,10 +187,8 @@ public class SimpleAnnotationProcessor implements IAnnotationProcessor {
                 filedValue = AnnotationUtil
                         .getBeans(context.getClazzBeanMap(), AnnotationUtil.getGenericClass(field, 0));
             } else if (type.isAssignableFrom(Set.class)) {
-                Set set = new HashSet();
-                set.addAll(
-                        AnnotationUtil.getBeans(context.getClazzBeanMap(), AnnotationUtil.getGenericClass(field, 0)));
-                filedValue = set;
+                filedValue = new HashSet(AnnotationUtil.getBeans(
+                        context.getClazzBeanMap(), AnnotationUtil.getGenericClass(field, 0)));
             } else if (type.isAssignableFrom(Map.class)) {
                 filedValue = AnnotationUtil
                         .getBeansMap(context.getClazzBeanMap(), AnnotationUtil.getGenericClass(field, 1));

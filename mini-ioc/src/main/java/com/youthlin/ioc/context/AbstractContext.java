@@ -138,9 +138,7 @@ public abstract class AbstractContext implements Context {
 
     @Override
     public <T> Set<T> getBeans(Class<T> clazz) {
-        Set<T> set = new HashSet<>();
-        set.addAll(AnnotationUtil.getBeans(getClazzBeanMap(), clazz));
-        return set;
+        return new HashSet<>(AnnotationUtil.getBeans(getClazzBeanMap(), clazz));
     }
 
     @Override

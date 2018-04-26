@@ -3,6 +3,7 @@ package com.youthlin.ioc.test;
 import com.youthlin.ioc.annotation.AnnotationUtil;
 import com.youthlin.ioc.context.ClasspathContext;
 import com.youthlin.ioc.context.Context;
+import com.youthlin.ioc.spi.IPostScanner;
 import com.youthlin.ioc.spi.IPreScanner;
 import org.junit.runners.BlockJUnit4ClassRunner;
 import org.junit.runners.model.InitializationError;
@@ -12,6 +13,7 @@ import org.slf4j.LoggerFactory;
 import javax.annotation.Resource;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.ServiceLoader;
 
 /**
  * 使用 JUnit 测试时, 可以使用 {@link org.junit.runner.RunWith} 注解指定 {@link org.junit.runner.Runner}
@@ -61,6 +63,15 @@ public class MiniRunner extends BlockJUnit4ClassRunner {
             scanPackages = new String[]{packageName};
         }
         List<IPreScanner> preScannerList = new ArrayList<>();
+        List<IPostScanner> postScannerList = new ArrayList<>();
+        ServiceLoader<IPreScanner> preScanners = ServiceLoader.load(IPreScanner.class);
+        ServiceLoader<IPostScanner> postScanners = ServiceLoader.load(IPostScanner.class);
+        for (IPreScanner preScanner : preScanners) {
+            preScannerList.add(preScanner);
+        }
+        for (IPostScanner postScanner : postScanners) {
+            postScannerList.add(postScanner);
+        }
         try {
             Class<?> testInstanceType = getTestClass().getJavaClass();
             if (AnnotationUtil.getAnnotation(testInstanceType, Resource.class) == null) {
@@ -77,7 +88,7 @@ public class MiniRunner extends BlockJUnit4ClassRunner {
         } catch (Exception e) {
             LOGGER.warn("", e);
         }
-        context = new ClasspathContext(preScannerList, scanPackages);
+        context = new ClasspathContext(preScannerList, postScannerList, scanPackages);
     }
 
     /**
