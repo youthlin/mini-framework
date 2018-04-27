@@ -4,6 +4,7 @@ import com.youthlin.aop.annotation.Aop;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
+import org.aspectj.lang.annotation.Pointcut;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -18,8 +19,12 @@ import java.lang.reflect.Method;
 public class AopService {
     private static final Logger LOGGER = LoggerFactory.getLogger(AopService.class);
 
-    @Around("execution(* com.youthlin.aop.test.service.IHelloService.sayHello(**))")
-    public Object around(ProceedingJoinPoint pjp) {
+    @Pointcut("execution(* com.youthlin.aop.test.service.IHelloService.sayHello(**))")
+    private void pointcut1() {
+    }
+
+    @Around("pointcut1() and args(theName)")
+    public Object around(ProceedingJoinPoint pjp, String theName) {
         try {
             Object proxy = pjp.getThis();
             Object target = pjp.getTarget();

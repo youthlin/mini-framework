@@ -1,6 +1,7 @@
 package com.youthlin.aop.core;
 
 import com.youthlin.aop.annotation.Aop;
+import com.youthlin.aop.proxy.AopProxy;
 import com.youthlin.ioc.annotation.AnnotationUtil;
 import com.youthlin.ioc.context.BeanPostProcessor;
 import com.youthlin.ioc.context.Context;
@@ -9,10 +10,11 @@ import org.aspectj.lang.annotation.AfterReturning;
 import org.aspectj.lang.annotation.AfterThrowing;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Before;
-import org.aspectj.lang.annotation.Pointcut;
 import org.aspectj.weaver.tools.JoinPointMatch;
 import org.aspectj.weaver.tools.PointcutExpression;
+import org.aspectj.weaver.tools.PointcutParameter;
 import org.aspectj.weaver.tools.PointcutParser;
+import org.aspectj.weaver.tools.PointcutPrimitive;
 import org.aspectj.weaver.tools.ShadowMatch;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,6 +25,7 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -34,8 +37,20 @@ import java.util.Set;
  */
 public class AopBeanPostProcessor implements BeanPostProcessor {
     private static final Logger LOGGER = LoggerFactory.getLogger(AopBeanPostProcessor.class);
+    private static final PointcutParameter[] EMPTY_POINTCUT_PARAMETER = new PointcutParameter[0];
+    private static final Class[] POINTCUT_ANNOTATIONS = new Class[]{After.class, AfterReturning.class, AfterThrowing.class, Around.class, Before.class/*, Pointcut.class*/};
     private final Context context;
     private Set<Object> advisors;
+
+    private static final Set<PointcutPrimitive> SUPPORT_POINTCUT_PRIMITIVE;
+
+    static {
+        //Set<PointcutPrimitive> allSupportedPointcutPrimitives = PointcutParser.getAllSupportedPointcutPrimitives();
+        Set<PointcutPrimitive> tmp = new HashSet<>();
+        tmp.add(PointcutPrimitive.EXECUTION);
+        tmp.add(PointcutPrimitive.REFERENCE);
+        SUPPORT_POINTCUT_PRIMITIVE = Collections.unmodifiableSet(tmp);
+    }
 
     public AopBeanPostProcessor(Context context) {
         this.context = context;
@@ -72,15 +87,19 @@ public class AopBeanPostProcessor implements BeanPostProcessor {
         return advisors;
     }
 
-    private static final Class[] POINTCUT_ANNOTATIONS = new Class[]{After.class, AfterReturning.class, AfterThrowing.class, Around.class, Before.class, Pointcut.class};
-
     private boolean match(Object advisor, Object bean, Class beanClass) {
-        PointcutParser pointcutParser = PointcutParser.getPointcutParserSupportingAllPrimitivesAndUsingContextClassloaderForResolution();
+        PointcutParser pointcutParser = PointcutParser.getPointcutParserSupportingSpecifiedPrimitivesAndUsingContextClassloaderForResolution(SUPPORT_POINTCUT_PRIMITIVE);
         for (Method method : advisor.getClass().getDeclaredMethods()) {
             Annotation annotation = AnnotationUtil.hasAnnotation(method, POINTCUT_ANNOTATIONS);
             if (annotation != null) {
                 String expression = AnnotationUtil.getValue(method, annotation);
-                PointcutExpression pointcutExpression = pointcutParser.parsePointcutExpression(expression);
+                PointcutExpression pointcutExpression;
+                try {
+                    pointcutExpression = pointcutParser.parsePointcutExpression(expression, advisor.getClass(), EMPTY_POINTCUT_PARAMETER);
+                } catch (Exception e) {
+                    LOGGER.error("Can not parse PointcutExpression:" + expression, e);
+                    throw e;
+                }
                 if (!pointcutExpression.couldMatchJoinPointsInType(beanClass)) {
                     continue;
                 }
