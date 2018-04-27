@@ -1,8 +1,9 @@
 package com.youthlin.aop.test.aop;
 
 import com.youthlin.aop.annotation.Aop;
-import com.youthlin.aop.annotation.Around;
-import com.youthlin.aop.core.ProceedingJoinPoint;
+import org.aspectj.lang.ProceedingJoinPoint;
+import org.aspectj.lang.annotation.Around;
+import org.aspectj.lang.annotation.Aspect;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -13,11 +14,11 @@ import java.lang.reflect.Method;
  * 时间: 2018-01-28 19:42
  */
 @Aop
+@Aspect
 public class AopService {
     private static final Logger LOGGER = LoggerFactory.getLogger(AopService.class);
 
-    //@Around(".*\\.sayHello\\(.*\\)")
-    @Around(".*")
+    @Around("execution(* com.youthlin.aop.test.service.IHelloService.sayHello(**))")
     public Object around(ProceedingJoinPoint pjp) {
         try {
             Object proxy = pjp.getThis();

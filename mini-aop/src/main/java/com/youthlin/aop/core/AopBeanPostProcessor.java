@@ -4,9 +4,20 @@ import com.youthlin.aop.annotation.Aop;
 import com.youthlin.ioc.annotation.AnnotationUtil;
 import com.youthlin.ioc.context.BeanPostProcessor;
 import com.youthlin.ioc.context.Context;
+import org.aspectj.lang.annotation.After;
+import org.aspectj.lang.annotation.AfterReturning;
+import org.aspectj.lang.annotation.AfterThrowing;
+import org.aspectj.lang.annotation.Around;
+import org.aspectj.lang.annotation.Before;
+import org.aspectj.lang.annotation.Pointcut;
+import org.aspectj.weaver.tools.JoinPointMatch;
+import org.aspectj.weaver.tools.PointcutExpression;
+import org.aspectj.weaver.tools.PointcutParser;
+import org.aspectj.weaver.tools.ShadowMatch;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.lang.annotation.Annotation;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
@@ -61,9 +72,34 @@ public class AopBeanPostProcessor implements BeanPostProcessor {
         return advisors;
     }
 
+    private static final Class[] POINTCUT_ANNOTATIONS = new Class[]{After.class, AfterReturning.class, AfterThrowing.class, Around.class, Before.class, Pointcut.class};
+
     private boolean match(Object advisor, Object bean, Class beanClass) {
-        if (beanClass.getName().toLowerCase().contains("hello")) {
-            return true;
+        PointcutParser pointcutParser = PointcutParser.getPointcutParserSupportingAllPrimitivesAndUsingContextClassloaderForResolution();
+        for (Method method : advisor.getClass().getDeclaredMethods()) {
+            Annotation annotation = AnnotationUtil.hasAnnotation(method, POINTCUT_ANNOTATIONS);
+            if (annotation != null) {
+                String expression = AnnotationUtil.getValue(method, annotation);
+                PointcutExpression pointcutExpression = pointcutParser.parsePointcutExpression(expression);
+                if (!pointcutExpression.couldMatchJoinPointsInType(beanClass)) {
+                    continue;
+                }
+                for (Method beanMethod : beanClass.getDeclaredMethods()) {
+                    ShadowMatch shadowMatch = pointcutExpression.matchesMethodExecution(beanMethod);
+                    if (shadowMatch.alwaysMatches()) {
+                        return true;
+                    }
+                    if (shadowMatch.neverMatches()) {
+                        continue;
+                    }
+                    if (shadowMatch.maybeMatches()) {
+                        JoinPointMatch joinPointMatch = shadowMatch.matchesJoinPoint(null, bean, null);
+                        if (joinPointMatch.matches()) {
+                            return true;
+                        }
+                    }
+                }
+            }
         }
         return false;
     }

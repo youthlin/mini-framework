@@ -226,6 +226,19 @@ public class AnnotationUtil {
         return ann;
     }
 
+    public static Annotation hasAnnotation(AnnotatedElement ae, Class... annotationType) {
+        if (annotationType == null) {
+            return null;
+        }
+        for (Class annotation : annotationType) {
+            Annotation an = getAnnotation(ae, annotation);
+            if (an != null) {
+                return an;
+            }
+        }
+        return null;
+    }
+
     @SuppressWarnings("unchecked")
     public static <T> T getDefaultValueOf(Class<T> clazz) {
         if (clazz.isPrimitive()) {
