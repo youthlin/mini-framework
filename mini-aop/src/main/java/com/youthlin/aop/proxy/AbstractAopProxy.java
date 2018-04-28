@@ -3,6 +3,7 @@ package com.youthlin.aop.proxy;
 import com.youthlin.aop.core.Advice;
 import com.youthlin.aop.core.JoinPointImpl;
 import com.youthlin.aop.core.ProceededJoinPoint;
+import org.aspectj.weaver.tools.PointcutExpression;
 
 import java.lang.reflect.Method;
 import java.util.ArrayList;
@@ -15,6 +16,8 @@ import java.util.List;
 public abstract class AbstractAopProxy implements AopProxy {
     private Object advisor;
     private Object original;
+    private PointcutExpression expression;
+
     private List<Advice> adviceList = new ArrayList<>();
 
     AbstractAopProxy(Object advisor, Object original) {
@@ -44,9 +47,18 @@ public abstract class AbstractAopProxy implements AopProxy {
         return point;
     }
 
+
     public Object invoke(ProceededJoinPoint pjp) {
 
         return pjp.getResult();
     }
 
+    public PointcutExpression getExpression() {
+        return expression;
+    }
+
+    public AbstractAopProxy setExpression(PointcutExpression expression) {
+        this.expression = expression;
+        return this;
+    }
 }

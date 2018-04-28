@@ -112,14 +112,13 @@ public class AopBeanPostProcessor implements BeanPostProcessor {
                         continue;
                     }
                     if (shadowMatch.alwaysMatches()) {
-                        bean = processAdvice(advisor, advisorMethod, bean, beanMethod, beanClass);
+                        bean = processAdvice(pointcutExpression, advisor, advisorMethod, bean, beanMethod, beanClass);
                         continue;
                     }
                     if (shadowMatch.maybeMatches()) {
                         JoinPointMatch joinPointMatch = shadowMatch.matchesJoinPoint(null, bean, null);
                         if (joinPointMatch.matches()) {
-                            bean = processAdvice(advisor, advisorMethod, bean, beanMethod, beanClass);
-                            continue;
+                            bean = processAdvice(pointcutExpression, advisor, advisorMethod, bean, beanMethod, beanClass);
                         }
                     }
                 }
@@ -129,7 +128,8 @@ public class AopBeanPostProcessor implements BeanPostProcessor {
     }
 
 
-    private Object processAdvice(Object advisor, Method adviceMethod, Object bean, Method beanMethod, Class beanClass) {
+    private Object processAdvice(PointcutExpression expression, Object advisor, Method adviceMethod, Object bean,
+            Method beanMethod, Class beanClass) {
         AbstractAopProxy aopProxy = beanToProxyFactory.get(bean);
         if (aopProxy != null) {
             LOGGER.info("is aop proxy add advice");
@@ -146,6 +146,7 @@ public class AopBeanPostProcessor implements BeanPostProcessor {
         } else {
             aopProxy = new AopCglibProxy(advisor, bean, itfsUse);
         }
+        aopProxy.setExpression(expression);
         bean = aopProxy.getProxy();
         beanToProxyFactory.put(bean, aopProxy);
         LOGGER.debug("bean class={},itfs={}", bean.getClass(), Arrays.toString(itfsUse));
