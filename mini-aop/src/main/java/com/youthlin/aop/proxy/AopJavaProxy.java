@@ -1,18 +1,32 @@
 package com.youthlin.aop.proxy;
 
+import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.Method;
+import java.lang.reflect.Proxy;
+
 /**
  * 创建: youthlin.chen
  * 时间: 2018-04-27 19:18
  */
-public class AopJavaProxy implements AopProxy {
-    private final Object original;
+public class AopJavaProxy extends AbstractAopProxy implements InvocationHandler {
+    private Object proxy;
 
-    public AopJavaProxy(Object original) {
-        this.original = original;
+    public AopJavaProxy(Object advisor,Object original, Class<?>[] itfs) {
+        super(advisor,original);
+        proxy = Proxy.newProxyInstance(getClass().getClassLoader(), itfs, this);
+    }
+
+
+    @Override
+    public Object getProxy() {
+        return proxy;
     }
 
     @Override
-    public Object getOriginal() {
-        return original;
+    public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+        if (accept(method)) {
+            return invoke(buildPjp(method, args));
+        }
+        return method.invoke(getOriginal(), args);
     }
 }

@@ -1,6 +1,7 @@
 package com.youthlin.aop.test;
 
 import com.youthlin.aop.test.service.IHelloService;
+import com.youthlin.aop.test.service.NoItfsService;
 import com.youthlin.ioc.context.Context;
 import com.youthlin.ioc.test.MiniRunner;
 import com.youthlin.ioc.test.Scan;
@@ -23,12 +24,18 @@ public class App {
     private Context context;
     @Resource
     private IHelloService helloService;
+    @Resource
+    private NoItfsService noItfsService;
 
     @Test
     public void run() {
         LOGGER.info("{}", context.getNameBeanMap());
         LOGGER.info("sayHello: {}", helloService.sayHello("Lin"));
         LOGGER.info("{}", helloService.getClass());
+        LOGGER.info("get Name: {}", noItfsService.getName(1));
+        LOGGER.info("{}", noItfsService.getClass());
+
+
     }
 
 }

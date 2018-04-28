@@ -1,20 +1,23 @@
 package com.youthlin.aop.test.aop;
 
-import com.youthlin.aop.annotation.Aop;
+import com.youthlin.aop.core.ProceededJoinPoint;
+import org.aspectj.lang.JoinPoint;
 import org.aspectj.lang.ProceedingJoinPoint;
+import org.aspectj.lang.annotation.AfterThrowing;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
+import org.aspectj.lang.annotation.Before;
 import org.aspectj.lang.annotation.Pointcut;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.lang.reflect.Method;
+import javax.annotation.Resource;
 
 /**
  * 创建: youthlin.chen
  * 时间: 2018-01-28 19:42
  */
-@Aop
+@Resource
 @Aspect
 public class AopService {
     private static final Logger LOGGER = LoggerFactory.getLogger(AopService.class);
@@ -39,14 +42,19 @@ public class AopService {
         return null;
     }
 
-    static public void main(String[] args) {
-        Class<AopService> clazz = AopService.class;
-        LOGGER.info("{}", clazz.getName());
-        for (Method method : clazz.getDeclaredMethods()) {
-            String s = method.toString();
-            LOGGER.info("{}", s);
-            LOGGER.info("{}", s.matches(".*\\.around\\(.*\\)"));
+    @AfterThrowing("pointcut1() and args(pjp)")
+    public Object onException(ProceededJoinPoint pjp) throws Throwable {
+        Throwable throwable = pjp.getThrowable();
+        if (throwable != null) {
+            LOGGER.error("", throwable);
+            throw throwable;
         }
+        return pjp.getResult();
+    }
+
+    @Before("execution(* com.youthlin.aop.test.service.NoItfsService.getName(**))")
+    public void before(JoinPoint jp) {
+        LOGGER.info("args:{}", jp.getArgs());
     }
 
 }

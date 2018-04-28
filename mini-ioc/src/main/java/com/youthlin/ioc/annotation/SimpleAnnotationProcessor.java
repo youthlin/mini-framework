@@ -78,7 +78,7 @@ public class SimpleAnnotationProcessor implements IAnnotationProcessor {
                 if (shouldNewInstance(aClass)) {
                     Object o = aClass.newInstance();
                     for (BeanPostProcessor beanPostProcessor : context.getBeans(BeanPostProcessor.class)) {
-                        o = beanPostProcessor.postProcess(o, name);
+                        o = beanPostProcessor.postProcess(o, aClass, name);
                     }
                     context.registerBean(o, name);
                     LOGGER.debug("find bean: {}, name: {}, annotations: {}", o.getClass(), name,
