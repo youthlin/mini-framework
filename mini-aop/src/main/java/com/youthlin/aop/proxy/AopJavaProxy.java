@@ -11,8 +11,8 @@ import java.lang.reflect.Proxy;
 public class AopJavaProxy extends AbstractAopProxy implements InvocationHandler {
     private Object proxy;
 
-    public AopJavaProxy(Object advisor,Object original, Class<?>[] itfs) {
-        super(advisor,original);
+    public AopJavaProxy(Object original, Class<?>[] itfs) {
+        super(original, itfs);
         proxy = Proxy.newProxyInstance(getClass().getClassLoader(), itfs, this);
     }
 
@@ -24,8 +24,8 @@ public class AopJavaProxy extends AbstractAopProxy implements InvocationHandler 
 
     @Override
     public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
-        if (accept(method)) {
-            return invoke(buildPjp(method, args));
+        if (accept(getProxy(), getOriginal(), method, args)) {
+            //return invoke(buildPjp(method, args));
         }
         return method.invoke(getOriginal(), args);
     }

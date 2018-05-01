@@ -4,6 +4,7 @@ import com.youthlin.aop.proxy.AbstractAopProxy;
 import com.youthlin.aop.proxy.AopCglibProxy;
 import com.youthlin.aop.proxy.AopJavaProxy;
 import com.youthlin.aop.proxy.AopProxy;
+import com.youthlin.aop.util.AopUtil;
 import com.youthlin.ioc.annotation.AnnotationUtil;
 import com.youthlin.ioc.context.BeanPostProcessor;
 import com.youthlin.ioc.context.Context;
@@ -14,12 +15,10 @@ import org.aspectj.lang.annotation.AfterThrowing;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Before;
-import org.aspectj.weaver.tools.JoinPointMatch;
 import org.aspectj.weaver.tools.PointcutExpression;
 import org.aspectj.weaver.tools.PointcutParameter;
 import org.aspectj.weaver.tools.PointcutParser;
 import org.aspectj.weaver.tools.PointcutPrimitive;
-import org.aspectj.weaver.tools.ShadowMatch;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -107,19 +106,8 @@ public class AopBeanPostProcessor implements BeanPostProcessor {
                     continue;
                 }
                 for (Method beanMethod : beanClass.getDeclaredMethods()) {
-                    ShadowMatch shadowMatch = pointcutExpression.matchesMethodExecution(beanMethod);
-                    if (shadowMatch.neverMatches()) {
-                        continue;
-                    }
-                    if (shadowMatch.alwaysMatches()) {
+                    if (AopUtil.match(pointcutExpression, beanMethod, advisor, bean, null)) {
                         bean = processAdvice(pointcutExpression, advisor, advisorMethod, bean, beanMethod, beanClass);
-                        continue;
-                    }
-                    if (shadowMatch.maybeMatches()) {
-                        JoinPointMatch joinPointMatch = shadowMatch.matchesJoinPoint(null, bean, null);
-                        if (joinPointMatch.matches()) {
-                            bean = processAdvice(pointcutExpression, advisor, advisorMethod, bean, beanMethod, beanClass);
-                        }
                     }
                 }
             }
@@ -127,13 +115,17 @@ public class AopBeanPostProcessor implements BeanPostProcessor {
         return bean;
     }
 
-
     private Object processAdvice(PointcutExpression expression, Object advisor, Method adviceMethod, Object bean,
             Method beanMethod, Class beanClass) {
+        AbstractAdvice advice = new AbstractAdvice();
+        advice.setAdvisor(advisor);
+        advice.setExpression(expression);
+        advice.setAdvisorMethod(adviceMethod);
+
         AbstractAopProxy aopProxy = beanToProxyFactory.get(bean);
         if (aopProxy != null) {
             LOGGER.info("is aop proxy add advice");
-            aopProxy.addAdvice(null);//////
+            aopProxy.addAdvice(advice);
             return bean;
         }
         Class<?>[] itfs = ClassUtil.getAllInterfacesForClass(beanClass);
@@ -142,11 +134,11 @@ public class AopBeanPostProcessor implements BeanPostProcessor {
         System.arraycopy(itfs, 0, itfsUse, 0, length);
         itfsUse[length] = AopProxy.class;
         if (length > 0) {
-            aopProxy = new AopJavaProxy(advisor, bean, itfsUse);
+            aopProxy = new AopJavaProxy(bean, itfsUse);
         } else {
-            aopProxy = new AopCglibProxy(advisor, bean, itfsUse);
+            aopProxy = new AopCglibProxy(bean, itfsUse);
         }
-        aopProxy.setExpression(expression);
+        aopProxy.addAdvice(advice);
         bean = aopProxy.getProxy();
         beanToProxyFactory.put(bean, aopProxy);
         LOGGER.debug("bean class={},itfs={}", bean.getClass(), Arrays.toString(itfsUse));

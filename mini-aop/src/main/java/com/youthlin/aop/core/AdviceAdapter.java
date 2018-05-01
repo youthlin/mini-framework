@@ -5,7 +5,6 @@ package com.youthlin.aop.core;
  * 时间: 2018-04-28 17:41
  */
 public class AdviceAdapter implements Advice {
-    protected Object[] EMPTY_ARRAY = new Object[0];
 
     public JoinPointImpl process(JoinPointImpl pjp) throws Throwable {
         before(pjp);

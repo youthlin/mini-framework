@@ -12,11 +12,9 @@ import java.lang.reflect.Method;
  */
 public class AopCglibProxy extends AbstractAopProxy implements MethodInterceptor {
     private Object proxy;
-    private Class<?>[] itfs;
 
-    public AopCglibProxy(Object advisor,Object original, Class<?>[] itfs) {
-        super(advisor,original);
-        this.itfs = itfs;
+    public AopCglibProxy(Object original, Class<?>[] itfs) {
+        super(original, itfs);
     }
 
     @Override
@@ -33,8 +31,8 @@ public class AopCglibProxy extends AbstractAopProxy implements MethodInterceptor
 
     @Override
     public Object intercept(Object o, Method method, Object[] args, MethodProxy methodProxy) throws Throwable {
-        if (accept(method)) {
-            return invoke(buildPjp(method, args));
+        if (accept(getProxy(), getOriginal(), method, args)) {
+            // return invoke(buildPjp(method, args));
         }
         return methodProxy.invoke(getOriginal(), args);
     }

@@ -1,9 +1,7 @@
 package com.youthlin.aop.proxy;
 
-import com.youthlin.aop.core.Advice;
-import com.youthlin.aop.core.JoinPointImpl;
-import com.youthlin.aop.core.ProceededJoinPoint;
-import org.aspectj.weaver.tools.PointcutExpression;
+import com.youthlin.aop.core.AbstractAdvice;
+import com.youthlin.aop.util.AopUtil;
 
 import java.lang.reflect.Method;
 import java.util.ArrayList;
@@ -14,15 +12,14 @@ import java.util.List;
  * 时间: 2018-04-28 14:49
  */
 public abstract class AbstractAopProxy implements AopProxy {
-    private Object advisor;
-    private Object original;
-    private PointcutExpression expression;
+    protected Object original;
+    protected Class<?>[] itfs;
 
-    private List<Advice> adviceList = new ArrayList<>();
+    private List<AbstractAdvice> adviceList = new ArrayList<>();
 
-    AbstractAopProxy(Object advisor, Object original) {
-        this.advisor = advisor;
+    AbstractAopProxy(Object original, Class<?>[] itfs) {
         this.original = original;
+        this.itfs = itfs;
     }
 
     public abstract Object getProxy();
@@ -32,33 +29,15 @@ public abstract class AbstractAopProxy implements AopProxy {
         return original;
     }
 
-    public void addAdvice(Advice advice) {
+    public void addAdvice(AbstractAdvice advice) {
         adviceList.add(advice);
     }
 
-    protected boolean accept(Method method) {
+    protected boolean accept(Object advisor, Object original, Method method, Object[] args) {
+        for (AbstractAdvice advice : adviceList) {
+            return AopUtil.match(advice.getExpression(), method, advisor, original, args);
+        }
         return false;
     }
 
-    protected ProceededJoinPoint buildPjp(Method method, Object[] args) {
-        JoinPointImpl point = new JoinPointImpl();
-        point.setTarget(original);
-        point.setTargetMethod(method);
-        return point;
-    }
-
-
-    public Object invoke(ProceededJoinPoint pjp) {
-
-        return pjp.getResult();
-    }
-
-    public PointcutExpression getExpression() {
-        return expression;
-    }
-
-    public AbstractAopProxy setExpression(PointcutExpression expression) {
-        this.expression = expression;
-        return this;
-    }
 }
