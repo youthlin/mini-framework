@@ -1,5 +1,7 @@
 package com.youthlin.aop.core;
 
+import com.youthlin.aop.advice.Advice;
+
 /**
  * 创建: youthlin.chen
  * 时间: 2018-04-28 17:41

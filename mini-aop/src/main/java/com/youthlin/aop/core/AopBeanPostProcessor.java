@@ -1,5 +1,11 @@
 package com.youthlin.aop.core;
 
+import com.youthlin.aop.advice.AbstractAdvice;
+import com.youthlin.aop.advice.AfterAdvice;
+import com.youthlin.aop.advice.AfterReturningAdvice;
+import com.youthlin.aop.advice.AfterThrowingAdvice;
+import com.youthlin.aop.advice.AroundAdvice;
+import com.youthlin.aop.advice.BeforeAdvice;
 import com.youthlin.aop.proxy.AbstractAopProxy;
 import com.youthlin.aop.proxy.AopCglibProxy;
 import com.youthlin.aop.proxy.AopJavaProxy;
@@ -57,7 +63,6 @@ public class AopBeanPostProcessor implements BeanPostProcessor {
             .getPointcutParserSupportingSpecifiedPrimitivesAndUsingContextClassloaderForResolution(SUPPORT_POINTCUT_PRIMITIVE);
     private static final PointcutParameter[] EMPTY_POINTCUT_PARAMETER = new PointcutParameter[0];
     private static final Class[] POINTCUT_ANNOTATIONS = new Class[]{After.class, AfterReturning.class, AfterThrowing.class, Around.class, Before.class};
-    private static final Class[] EMPTY_CLASS_ARRAY = new Class[0];
 
     private final Context context;
     private Set<Object> advisors;
@@ -107,7 +112,7 @@ public class AopBeanPostProcessor implements BeanPostProcessor {
                 }
                 for (Method beanMethod : beanClass.getDeclaredMethods()) {
                     if (AopUtil.match(pointcutExpression, beanMethod, advisor, bean, null)) {
-                        bean = processAdvice(pointcutExpression, advisor, advisorMethod, bean, beanMethod, beanClass);
+                        bean = processAdvice(pointcutExpression, advisor, advisorMethod, bean, annotation.getClass(), beanClass);
                     }
                 }
             }
@@ -116,12 +121,24 @@ public class AopBeanPostProcessor implements BeanPostProcessor {
     }
 
     private Object processAdvice(PointcutExpression expression, Object advisor, Method adviceMethod, Object bean,
-            Method beanMethod, Class beanClass) {
-        AbstractAdvice advice = new AbstractAdvice();
+            Class<? extends Annotation> annotationClass, Class beanClass) {
+        AbstractAdvice advice;
+        if (Before.class.isAssignableFrom(annotationClass)) {
+            advice = new BeforeAdvice();
+        } else if (After.class.isAssignableFrom(annotationClass)) {
+            advice = new AfterAdvice();
+        } else if (AfterReturning.class.isAssignableFrom(annotationClass)) {
+            advice = new AfterReturningAdvice();
+        } else if (AfterThrowing.class.isAssignableFrom(annotationClass)) {
+            advice = new AfterThrowingAdvice();
+        } else if (Around.class.isAssignableFrom(annotationClass)) {
+            advice = new AroundAdvice();
+        } else {
+            throw new IllegalStateException("Expected one of " + Arrays.toString(POINTCUT_ANNOTATIONS));
+        }
         advice.setAdvisor(advisor);
         advice.setExpression(expression);
         advice.setAdvisorMethod(adviceMethod);
-
         AbstractAopProxy aopProxy = beanToProxyFactory.get(bean);
         if (aopProxy != null) {
             LOGGER.info("is aop proxy add advice");

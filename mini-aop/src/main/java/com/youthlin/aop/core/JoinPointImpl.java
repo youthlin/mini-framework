@@ -1,33 +1,27 @@
 package com.youthlin.aop.core;
 
+import com.youthlin.aop.advice.AbstractAdvice;
 import org.aspectj.lang.Signature;
 import org.aspectj.lang.reflect.SourceLocation;
 import org.aspectj.runtime.internal.AroundClosure;
 
-import java.lang.reflect.Method;
 import java.util.List;
 
 /**
- * 封装一次调用 包含参数调用后的结果异常信息等
+ * 封装一次调用的参数 包含参数调用后的结果异常信息等
  * 创建: youthlin.chen
  * 时间: 2018-04-28 14:31
  */
 public class JoinPointImpl implements ProceededJoinPoint {
-    private Object advisor;
+    private Object proxy;
     private Object target;
-    private Method targetMethod;
     private Object[] args;
     private Object result;
     private Throwable throwable;
     private List<AbstractAdvice> adviceList;
 
-    public Object getAdvisor() {
-        return advisor;
-    }
-
-    public JoinPointImpl setAdvisor(Object advisor) {
-        this.advisor = advisor;
-        return this;
+    public void setProxy(Object proxy) {
+        this.proxy = proxy;
     }
 
     @Override
@@ -42,7 +36,7 @@ public class JoinPointImpl implements ProceededJoinPoint {
 
     @Override
     public Object getThis() {
-        return null;
+        return proxy;
     }
 
     @Override
@@ -55,14 +49,6 @@ public class JoinPointImpl implements ProceededJoinPoint {
         return this;
     }
 
-    public Method getTargetMethod() {
-        return targetMethod;
-    }
-
-    public JoinPointImpl setTargetMethod(Method targetMethod) {
-        this.targetMethod = targetMethod;
-        return this;
-    }
 
     @Override
     public Object[] getArgs() {
@@ -130,7 +116,7 @@ public class JoinPointImpl implements ProceededJoinPoint {
 
     @Override
     public Object proceed() throws Throwable {
-        return null;
+        return proceed(getArgs());
     }
 
     @Override

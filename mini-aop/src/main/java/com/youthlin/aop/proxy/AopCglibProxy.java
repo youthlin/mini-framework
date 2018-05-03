@@ -1,10 +1,14 @@
 package com.youthlin.aop.proxy;
 
+import com.youthlin.aop.advice.AbstractAdvice;
+import com.youthlin.aop.core.Invocation;
+import com.youthlin.aop.core.JoinPointImpl;
 import net.sf.cglib.proxy.Enhancer;
 import net.sf.cglib.proxy.MethodInterceptor;
 import net.sf.cglib.proxy.MethodProxy;
 
 import java.lang.reflect.Method;
+import java.util.List;
 
 /**
  * 创建: youthlin.chen
@@ -31,8 +35,11 @@ public class AopCglibProxy extends AbstractAopProxy implements MethodInterceptor
 
     @Override
     public Object intercept(Object o, Method method, Object[] args, MethodProxy methodProxy) throws Throwable {
-        if (accept(getProxy(), getOriginal(), method, args)) {
-            // return invoke(buildPjp(method, args));
+        List<AbstractAdvice> matchedAdviceList = getMatchedAdviceList(method, args);
+        if (!matchedAdviceList.isEmpty()) {
+            Invocation invocation = buildInvocation(method, args, matchedAdviceList);
+            JoinPointImpl joinPoint = buildPjp(args, matchedAdviceList);
+            return invocation.invoke(joinPoint);
         }
         return methodProxy.invoke(getOriginal(), args);
     }

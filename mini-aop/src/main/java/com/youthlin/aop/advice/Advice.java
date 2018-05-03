@@ -1,4 +1,4 @@
-package com.youthlin.aop.core;
+package com.youthlin.aop.advice;
 
 /**
  * 创建: youthlin.chen

@@ -1,5 +1,7 @@
 package com.youthlin.aop.core;
 
+import com.youthlin.aop.advice.AbstractAdvice;
+
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.List;
@@ -17,15 +19,23 @@ public class Invocation {
     private Throwable throwable;
     private List<AbstractAdvice> adviceList;
     private int current;
+    private boolean invoked = false;
 
     public Object invoke(JoinPointImpl pjp) throws Throwable {
         if (current < adviceList.size()) {
             adviceList.get(current++).invoke(pjp, this);
         }
+        if (invoked) {
+            if (getThrowable() != null) {
+                throw getThrowable();
+            }
+            return getResult();
+        }
+        invoked = true;
         Throwable t = null;
         try {
             originalMethod.setAccessible(true);
-            Object invoke = originalMethod.invoke(originalMethod, args);
+            Object invoke = originalMethod.invoke(originalObject, args);
             setResult(invoke);
         } catch (IllegalAccessException e) {
             t = e;
@@ -34,10 +44,12 @@ public class Invocation {
         }
         if (t != null) {
             setThrowable(t);
+            throw t;
         }
         return getResult();
     }
 
+    //region getter setter
     public Object getOriginalObject() {
         return originalObject;
     }
@@ -93,4 +105,6 @@ public class Invocation {
     public void setCurrent(int current) {
         this.current = current;
     }
+    //endregion getter setter
+
 }

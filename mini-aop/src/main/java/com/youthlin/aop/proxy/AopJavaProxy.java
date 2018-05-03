@@ -1,8 +1,13 @@
 package com.youthlin.aop.proxy;
 
+import com.youthlin.aop.advice.AbstractAdvice;
+import com.youthlin.aop.core.Invocation;
+import com.youthlin.aop.core.JoinPointImpl;
+
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
+import java.util.List;
 
 /**
  * 创建: youthlin.chen
@@ -24,9 +29,13 @@ public class AopJavaProxy extends AbstractAopProxy implements InvocationHandler 
 
     @Override
     public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
-        if (accept(getProxy(), getOriginal(), method, args)) {
-            //return invoke(buildPjp(method, args));
+        List<AbstractAdvice> matchedAdviceList = getMatchedAdviceList(method, args);
+        if (!matchedAdviceList.isEmpty()) {
+            Invocation invocation = buildInvocation(method, args, matchedAdviceList);
+            JoinPointImpl joinPoint = buildPjp(args, matchedAdviceList);
+            return invocation.invoke(joinPoint);
         }
         return method.invoke(getOriginal(), args);
     }
+
 }

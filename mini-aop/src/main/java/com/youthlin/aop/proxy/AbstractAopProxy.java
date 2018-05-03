@@ -1,6 +1,8 @@
 package com.youthlin.aop.proxy;
 
-import com.youthlin.aop.core.AbstractAdvice;
+import com.youthlin.aop.advice.AbstractAdvice;
+import com.youthlin.aop.core.Invocation;
+import com.youthlin.aop.core.JoinPointImpl;
 import com.youthlin.aop.util.AopUtil;
 
 import java.lang.reflect.Method;
@@ -33,11 +35,32 @@ public abstract class AbstractAopProxy implements AopProxy {
         adviceList.add(advice);
     }
 
-    protected boolean accept(Object advisor, Object original, Method method, Object[] args) {
+    protected List<AbstractAdvice> getMatchedAdviceList(Method method, Object[] args) {
+        List<AbstractAdvice> list = new ArrayList<>(adviceList.size());
         for (AbstractAdvice advice : adviceList) {
-            return AopUtil.match(advice.getExpression(), method, advisor, original, args);
+            if (AopUtil.match(advice.getExpression(), method, advice.getAdvisor(), getOriginal(), args)) {
+                list.add(advice);
+            }
         }
-        return false;
+        return list;
+    }
+
+    protected Invocation buildInvocation(Method originalMethod, Object[] args, List<AbstractAdvice> matchedAdviceList) {
+        Invocation invocation = new Invocation();
+        invocation.setOriginalObject(getOriginal());
+        invocation.setOriginalMethod(originalMethod);
+        invocation.setArgs(args);
+        invocation.setAdviceList(matchedAdviceList);
+        return invocation;
+    }
+
+    protected JoinPointImpl buildPjp(Object[] args, List<AbstractAdvice> matchedAdviceList) {
+        JoinPointImpl pjp = new JoinPointImpl();
+        pjp.setProxy(getProxy());
+        pjp.setTarget(getOriginal());
+        pjp.setArgs(args);
+        pjp.setAdviceList(matchedAdviceList);
+        return pjp;
     }
 
 }

@@ -1,6 +1,9 @@
-package com.youthlin.aop.core;
+package com.youthlin.aop.advice;
 
 
+import com.youthlin.aop.core.Invocation;
+import com.youthlin.aop.core.JoinPointImpl;
+import com.youthlin.aop.util.AopUtil;
 import org.aspectj.weaver.tools.PointcutExpression;
 
 import java.lang.reflect.InvocationTargetException;
@@ -10,7 +13,7 @@ import java.lang.reflect.Method;
  * 创建: youthlin.chen
  * 时间: 2018-05-01 14:46
  */
-public class AbstractAdvice implements Advice {
+public abstract class AbstractAdvice implements Advice {
     private Object advisor;
     private PointcutExpression expression;//用于判断是否match某个方法
     private Method advisorMethod;
@@ -53,8 +56,6 @@ public class AbstractAdvice implements Advice {
         } finally {
             onDone(point);
         }
-
-
     }
 
     protected void before(JoinPointImpl point) throws Throwable {
@@ -72,4 +73,14 @@ public class AbstractAdvice implements Advice {
 
     protected void onDone(JoinPointImpl point) throws Throwable {
     }
+
+    protected Object[] buildAdviceMethodArgs(JoinPointImpl pjp) {
+        Class<?>[] parameterTypes = advisorMethod.getParameterTypes();
+        Object[] args = AopUtil.EMPTY_ARRAY;
+        if (parameterTypes.length == 1) {
+            args = new Object[]{pjp};
+        }
+        return args;
+    }
+
 }

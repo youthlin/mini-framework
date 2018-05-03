@@ -26,27 +26,24 @@ public class AopService {
     private void pointcut1() {
     }
 
-    @Around("pointcut1() and args(theName)")
-    public Object around(ProceedingJoinPoint pjp, String theName) {
-        try {
-            Object proxy = pjp.getThis();
-            Object target = pjp.getTarget();
-            Object[] args = pjp.getArgs();
-            LOGGER.info("proxy={}, target={}, args={}", proxy, target, args);
-            Object proceed = pjp.proceed(args);
-            LOGGER.info("proceed={}", proceed);
-            return proceed;
-        } catch (Throwable t) {
-            t.printStackTrace();
-        }
-        return null;
+    @Around("pointcut1() ")
+    public Object around(ProceedingJoinPoint pjp) throws Throwable {
+
+        Object proxy = pjp.getThis();
+        Object target = pjp.getTarget();
+        Object[] args = pjp.getArgs();
+        LOGGER.info("proxy={}, target={}, args={}", proxy, target, args);
+        Object proceed = pjp.proceed(args);
+        LOGGER.info("proceed={}", proceed);
+        return proceed;
+
     }
 
     @AfterThrowing("pointcut1() and args(pjp)")
     public Object onException(ProceededJoinPoint pjp) throws Throwable {
         Throwable throwable = pjp.getThrowable();
         if (throwable != null) {
-            LOGGER.error("", throwable);
+            LOGGER.error("onException", throwable);
             throw throwable;
         }
         return pjp.getResult();
